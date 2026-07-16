@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <section class="hero">
+    <div class="container">
+      <div>
+        <span class="eyebrow">The Beautique Collection</span>
+        <h1>Beauty that feels like <em>you</em>.</h1>
+        <p class="hero-text">Radiant makeup, nourishing skincare, and elegant scents — thoughtfully curated so your everyday glow feels effortless.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="/shop">Shop the collection</a>
+          <a class="btn btn-ghost" href="/about">Our story</a>
+        </div>
+        <div class="hero-meta">
+          <div><strong>100%</strong><span>Vegan &amp; cruelty-free</span></div>
+          <div><strong>48h</strong><span>Fast delivery</span></div>
+          <div><strong>30 days</strong><span>Easy returns</span></div>
+        </div>
+      </div>
+      <div class="hero-collage">
+        <% arrivals.slice(0, 2).forEach(function(product) { %>
+          <a href="/product/<%= product.id %>" class="product-art hero-tile" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
+            <span class="art-emoji"><%= product.emoji %></span>
+          </a>
+        <% }); %>
+        <div class="hero-note"><span class="dot"></span> Free shipping over $50</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="value-strip">
+        <div class="value-item reveal">
+          <span class="value-icon">🌿</span>
+          <div><h4>Clean formulas</h4><p>Vegan, cruelty-free, and kind to sensitive skin.</p></div>
+        </div>
+        <div class="value-item reveal">
+          <span class="value-icon">🚚</span>
+          <div><h4>Fast delivery</h4><p>Free over $50, tracked to your door.</p></div>
+        </div>
+        <div class="value-item reveal">
+          <span class="value-icon">🔒</span>
+          <div><h4>Secure checkout</h4><p>Pay online or on delivery — your choice.</p></div>
+        </div>
+        <div class="value-item reveal">
+          <span class="value-icon">💌</span>
+          <div><h4>Real support</h4><p>Questions? Our studio replies within a day.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Curated for you</span>
+          <h2>Featured products</h2>
+        </div>
+        <a class="link-more" href="/shop">Shop all →</a>
+      </div>
+      <div class="grid grid-3">
+        <% featured.forEach(function(product) { %>
+          <%- include('partials/product-card', { product: product }) %>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Find your ritual</span>
+          <h2>Shop by category</h2>
+        </div>
+      </div>
+      <div class="grid grid-3">
+        <% categories.forEach(function(category) { %>
+          <a class="category-card reveal" href="/shop?category=<%= category.id %>" style="--tone: <%= category.tone %>;">
+            <span class="cat-emoji"><%= category.emoji %></span>
+            <h3><%= category.title %></h3>
+            <p><%= category.text %></p>
+            <span class="cat-count"><%= category.count %> product<%= category.count === 1 ? '' : 's' %> →</span>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="newsletter-band reveal">
+        <div>
+          <h2>Glow in your inbox ✨</h2>
+          <p>New arrivals, beauty rituals, and subscriber-only offers. No spam — just glow.</p>
+        </div>
+        <form class="newsletter-form" id="newsletter-form">
+          <input type="email" id="newsletter-email" placeholder="Your email address" required>
+          <button class="btn btn-primary" type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'home' }) %>
+</body>
+</html>

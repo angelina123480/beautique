@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body data-signed-in="<%= user ? '1' : '' %>">
+  <%- include('partials/header') %>
+
+  <section class="container" style="padding-top: 44px;" id="product-page" data-product-id="<%= product.id %>">
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="/">Home</a><span class="sep">/</span>
+      <a href="/shop">Shop</a><span class="sep">/</span>
+      <a href="/shop?category=<%= product.category %>" style="text-transform: capitalize;"><%= product.category %></a><span class="sep">/</span>
+      <span><%= product.name %></span>
+    </nav>
+
+    <div class="product-layout">
+      <div>
+        <% if (product.images && product.images.length) { %>
+          <div class="gallery-main">
+            <img id="gallery-main-img" src="<%= product.images[0] %>" alt="<%= product.name %>" style="width:100%; display:block; aspect-ratio:1/1; object-fit:cover;">
+          </div>
+          <% if (product.images.length > 1) { %>
+            <div class="gallery-thumbs">
+              <% product.images.forEach(function(image, index) { %>
+                <img class="thumb <%= index === 0 ? 'is-active' : '' %>" src="<%= image %>" alt="<%= product.name %> view <%= index + 1 %>" data-src="<%= image %>">
+              <% }); %>
+            </div>
+          <% } %>
+        <% } else { %>
+          <div class="product-art gallery-main" style="--tone: <%= product.tone %>;">
+            <span class="art-emoji" style="font-size: clamp(80px, 14vw, 130px);"><%= product.emoji %></span>
+          </div>
+        <% } %>
+        <% if (product.modelImage) { %>
+          <img src="<%= product.modelImage %>" alt="Model wearing <%= product.name %>" style="margin-top:18px; border-radius: var(--radius); box-shadow: var(--shadow-md);">
+        <% } %>
+      </div>
+
+      <div class="pdp-info">
+        <% if (product.badge) { %><span class="badge badge-gold"><%= product.badge %></span><% } %>
+        <h1><%= product.name %></h1>
+        <span class="product-brand">By <%= product.brand %> · <span style="text-transform: capitalize;"><%= product.category %></span></span>
+        <div style="margin-top: 10px;">
+          <% if (product.reviewCount) { %>
+            <%- include('partials/stars', { rating: product.rating, count: product.reviewCount }) %>
+          <% } else { %>
+            <span class="text-muted" style="font-size: 13.5px;">No reviews yet</span>
+          <% } %>
+        </div>
+
+        <span class="price"><%= money(product.price) %> <small>· free shipping over $50</small></span>
+
+        <% if (!product.available) { %>
+          <span class="stock-pill stock-out">Sold out</span>
+        <% } else if (product.stock <= 5) { %>
+          <span class="stock-pill stock-low">Only <%= product.stock %> left</span>
+        <% } else { %>
+          <span class="stock-pill stock-in"><%= product.stock %> in stock</span>
+        <% } %>
+
+        <p style="margin-top: 18px; color: var(--ink-soft); line-height: 1.75;"><%= product.description %></p>
+
+        <% if (product.shades && product.shades.length) { %>
+          <div class="field" style="margin-top: 18px;">
+            <label for="shade-select">Shade</label>
+            <select id="shade-select" class="select-pill" style="width: 100%;">
+              <% product.shades.forEach(function(shade) { %>
+                <option value="<%= shade.name %>" data-color="<%= shade.color %>"><%= shade.label %></option>
+              <% }); %>
+            </select>
+          </div>
+        <% } %>
+
+        <div class="pdp-actions">
+          <% if (product.available) { %>
+            <div class="qty-stepper" id="pdp-qty">
+              <button type="button" id="pdp-qty-minus" aria-label="Decrease quantity">−</button>
+              <span class="qty-val" id="pdp-qty-val">1</span>
+              <button type="button" id="pdp-qty-plus" aria-label="Increase quantity">+</button>
+            </div>
+            <button class="btn btn-primary add-to-cart" type="button" id="pdp-add"
+                    data-id="<%= product.id %>"
+                    data-name="<%= product.name %>"
+                    data-price="<%= product.price %>"
+                    data-emoji="<%= product.emoji %>"
+                    data-tone="<%= product.tone %>"
+                    data-stock="<%= product.stock %>"
+                    data-shade="<%= product.selectedShade ? product.selectedShade.name : '' %>">Add to bag — <%= money(product.price) %></button>
+          <% } else { %>
+            <button class="btn btn-primary" disabled>Sold out</button>
+            <a class="btn btn-ghost" href="/shop">Browse alternatives</a>
+          <% } %>
+        </div>
+
+        <div class="accordion">
+          <details open>
+            <summary>Why you'll love it</summary>
+            <div class="accordion-body"><%= product.description %> Designed to layer beautifully with the rest of your Beautique ritual.</div>
+          </details>
+          <details>
+            <summary>Shipping &amp; returns</summary>
+            <div class="accordion-body">Free tracked shipping on orders over $50 (otherwise $5.95). Unopened products can be returned within 30 days for a full refund.</div>
+          </details>
+          <details>
+            <summary>Our promise</summary>
+            <div class="accordion-body">Every Beautique formula is vegan, cruelty-free, and made in small batches with skin-kind ingredients.</div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="reviews">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">What people say</span>
+          <h2>Reviews</h2>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="align-items: start;">
+        <div class="card">
+          <% if (reviews.length) { %>
+            <div class="review-summary-box">
+              <span class="big-score"><%= product.rating %></span>
+              <div>
+                <%- include('partials/stars', { rating: product.rating }) %>
+                <p class="text-muted" style="margin: 4px 0 0; font-size: 13.5px;">Based on <%= product.reviewCount %> review<%= product.reviewCount === 1 ? '' : 's' %></p>
+              </div>
+            </div>
+            <div id="review-list">
+              <% reviews.forEach(function(review) { %>
+                <div class="review-item">
+                  <div class="review-item-head">
+                    <strong><%= review.userName %></strong>
+                    <span class="stars"><%- '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating) %></span>
+                    <% if (review.verified) { %><span class="verified-tag">✓ Verified purchase</span><% } %>
+                    <span class="review-date"><%= dateLabel(review.createdAt) %></span>
+                  </div>
+                  <% if (review.comment) { %><p><%= review.comment %></p><% } %>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <div class="empty-state" style="padding: 40px 10px;">
+              <span class="empty-emoji">💬</span>
+              <h3>No reviews yet</h3>
+              <p>Be the first to share your experience.</p>
+            </div>
+          <% } %>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 22px;">Write a review</h3>
+          <% if (user) { %>
+            <form id="review-form">
+              <div class="field">
+                <label>Your rating</label>
+                <div class="star-picker" id="star-picker">
+                  <span data-value="1">★</span><span data-value="2">★</span><span data-value="3">★</span><span data-value="4">★</span><span data-value="5">★</span>
+                </div>
+                <input type="hidden" id="review-rating" value="5">
+              </div>
+              <div class="field">
+                <label for="review-comment">Your review</label>
+                <textarea id="review-comment" placeholder="What did you like? How does it feel?"></textarea>
+              </div>
+              <button class="btn btn-primary" type="submit">Submit review</button>
+              <div class="form-status" id="review-status"></div>
+            </form>
+          <% } else { %>
+            <p class="text-muted">Sign in to share your experience with this product.</p>
+            <a class="btn btn-soft" href="/auth">Sign in to review</a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <% if (related.length) { %>
+      <div style="padding-bottom: 40px;">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Keep exploring</span>
+            <h2>You may also love</h2>
+          </div>
+        </div>
+        <div class="grid grid-3">
+          <% related.forEach(function(product) { %>
+            <%- include('partials/product-card', { product: product }) %>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'product' }) %>
+</body>
+</html>

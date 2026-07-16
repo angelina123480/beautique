@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">The collection</span>
+    <h1>Shop</h1>
+    <p class="lead">Curated cosmetics for a fresh, confident look — every single day.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <div class="shop-toolbar">
+      <form class="search-box" id="shop-search-form" method="get" action="/shop">
+        <input type="text" name="search" id="shop-search-input" placeholder="Search products, brands…" value="<%= searchTerm %>">
+        <% if (activeCategory) { %><input type="hidden" name="category" value="<%= activeCategory %>"><% } %>
+        <% if (activeSort !== 'featured') { %><input type="hidden" name="sort" value="<%= activeSort %>"><% } %>
+        <button type="submit" aria-label="Search">🔍</button>
+      </form>
+
+      <div class="chip-row">
+        <% var qsSort = activeSort !== 'featured' ? '&sort=' + activeSort : ''; %>
+        <% var qsSearch = searchTerm ? '&search=' + encodeURIComponent(searchTerm) : ''; %>
+        <a class="chip <%= !activeCategory ? 'is-active' : '' %>" href="/shop?<%= (qsSort + qsSearch).replace(/^&/, '') %>">All</a>
+        <% categories.forEach(function(category) { %>
+          <a class="chip <%= activeCategory === category.id ? 'is-active' : '' %>"
+             href="/shop?category=<%= category.id %><%= qsSort %><%= qsSearch %>"><%= category.emoji %> <%= category.title %></a>
+        <% }); %>
+      </div>
+
+      <form method="get" action="/shop" id="shop-sort-form">
+        <% if (activeCategory) { %><input type="hidden" name="category" value="<%= activeCategory %>"><% } %>
+        <% if (searchTerm) { %><input type="hidden" name="search" value="<%= searchTerm %>"><% } %>
+        <select class="select-pill" name="sort" id="shop-sort" aria-label="Sort products">
+          <option value="featured" <%= activeSort === 'featured' ? 'selected' : '' %>>Sort: Featured</option>
+          <option value="price-asc" <%= activeSort === 'price-asc' ? 'selected' : '' %>>Price: low → high</option>
+          <option value="price-desc" <%= activeSort === 'price-desc' ? 'selected' : '' %>>Price: high → low</option>
+          <option value="rating" <%= activeSort === 'rating' ? 'selected' : '' %>>Top rated</option>
+          <option value="name" <%= activeSort === 'name' ? 'selected' : '' %>>Name A–Z</option>
+        </select>
+      </form>
+    </div>
+
+    <% if (searchTerm) { %>
+      <p class="text-muted" style="margin-bottom: 22px;"><%= products.length %> result<%= products.length === 1 ? '' : 's' %> for “<%= searchTerm %>”</p>
+    <% } %>
+
+    <% if (products.length === 0) { %>
+      <div class="empty-state">
+        <span class="empty-emoji">🔎</span>
+        <h3>No products found</h3>
+        <p>Try a different search, or browse a brand like Luna, Aura, or Nova.</p>
+        <a class="btn btn-soft" href="/shop">Clear filters</a>
+      </div>
+    <% } else { %>
+      <div class="grid grid-3">
+        <% products.forEach(function(product) { %>
+          <%- include('partials/product-card', { product: product }) %>
+        <% }); %>
+      </div>
+    <% } %>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'shop' }) %>
+</body>
+</html>

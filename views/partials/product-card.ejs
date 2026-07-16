@@ -1,0 +1,32 @@
+<article class="product-card reveal">
+  <% if (product.badge) { %><span class="badge"><%= product.badge %></span><% } %>
+  <a href="/product/<%= product.id %>" class="product-art" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
+    <% if (product.images && product.images.length) { %>
+      <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
+    <% } else { %>
+      <span class="art-emoji"><%= product.emoji %></span>
+    <% } %>
+  </a>
+  <div class="product-card-body">
+    <span class="product-brand"><%= product.brand %></span>
+    <h3><a href="/product/<%= product.id %>"><%= product.name %></a></h3>
+    <% if (product.reviewCount) { %>
+      <%- include('stars', { rating: product.rating, count: product.reviewCount }) %>
+    <% } %>
+    <p class="product-desc"><%= product.description %></p>
+    <div class="product-card-foot">
+      <span class="price"><%= money(product.price) %></span>
+      <% if (product.available) { %>
+        <button class="btn btn-primary btn-sm add-to-cart" type="button"
+                data-id="<%= product.id %>"
+                data-name="<%= product.name %>"
+                data-price="<%= product.price %>"
+                data-emoji="<%= product.emoji %>"
+                data-tone="<%= product.tone %>"
+                data-stock="<%= product.stock %>">Add to bag</button>
+      <% } else { %>
+        <span class="stock-pill stock-out">Sold out</span>
+      <% } %>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Say hello</span>
+    <h1>Contact us</h1>
+    <p class="lead">Questions about an order, a product, or your routine? We'd love to help.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <div class="grid grid-2" style="align-items: start;">
+      <div class="card">
+        <h3 style="font-size: 22px;">Send us a message</h3>
+        <form id="contact-form">
+          <div class="field-row">
+            <div class="field">
+              <label for="contact-name">Your name</label>
+              <input id="contact-name" type="text" placeholder="Jane Glow" required>
+            </div>
+            <div class="field">
+              <label for="contact-email">Email address</label>
+              <input id="contact-email" type="email" placeholder="you@example.com" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" placeholder="How can we help?" required></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">Send message</button>
+          <div class="form-status" id="contact-status"></div>
+        </form>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom: 20px;">
+          <h3 style="font-size: 20px;">Visit our beauty studio</h3>
+          <p class="text-muted" style="margin-bottom: 6px;">📍 24 Rue de la Mode, Paris</p>
+          <p class="text-muted" style="margin-bottom: 6px;">📞 +1 (800) 555-0148</p>
+          <p class="text-muted" style="margin-bottom: 0;">✉️ <a href="mailto:hello@lunabeauty.com">hello@lunabeauty.com</a></p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 20px;">Support hours</h3>
+          <p class="text-muted" style="margin-bottom: 6px;">Monday – Friday · 9:00 – 18:00</p>
+          <p class="text-muted" style="margin-bottom: 0;">We reply to every message within one business day. 💌</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'contact' }) %>
+</body>
+</html>

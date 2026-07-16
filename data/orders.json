@@ -1,0 +1,121 @@
+[
+  {
+    "id": 1784116221689,
+    "items": [
+      {
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "productId": 2
+      },
+      {
+        "name": "Velvet Satin Lip",
+        "quantity": 1,
+        "price": 24,
+        "productId": 1
+      },
+      {
+        "name": "Lash Lift Mascara",
+        "quantity": 1,
+        "price": 22,
+        "productId": 3
+      }
+    ],
+    "total": 85,
+    "createdAt": "2026-07-15T11:50:21.689Z",
+    "status": "confirmed",
+    "subtotal": 85,
+    "shipping": 0
+  },
+  {
+    "id": 1784117898124,
+    "items": [
+      {
+        "name": "Velvet Satin Lip",
+        "quantity": 1,
+        "price": 24,
+        "productId": 1
+      }
+    ],
+    "total": 24,
+    "createdAt": "2026-07-15T12:18:18.124Z",
+    "status": "confirmed",
+    "subtotal": 24,
+    "shipping": 0
+  },
+  {
+    "id": 1784186127923,
+    "userId": 1,
+    "userEmail": "admin@luna.com",
+    "status": "confirmed",
+    "items": [
+      {
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "productId": 2
+      }
+    ],
+    "total": 39,
+    "createdAt": "2026-07-16T07:15:27.924Z",
+    "subtotal": 39,
+    "shipping": 0
+  },
+  {
+    "id": 1784190641321,
+    "userId": 1,
+    "userEmail": "admin@luna.com",
+    "status": "confirmed",
+    "items": [
+      {
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "productId": 2
+      }
+    ],
+    "total": 39,
+    "paymentMethod": "online",
+    "createdAt": "2026-07-16T08:30:41.321Z",
+    "subtotal": 39,
+    "shipping": 0
+  },
+  {
+    "id": 1784190666096,
+    "userId": 1,
+    "userEmail": "admin@luna.com",
+    "status": "confirmed",
+    "items": [
+      {
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "productId": 2
+      }
+    ],
+    "total": 39,
+    "paymentMethod": "delivery",
+    "createdAt": "2026-07-16T08:31:06.096Z",
+    "subtotal": 39,
+    "shipping": 0
+  },
+  {
+    "id": 1784192993354,
+    "userId": null,
+    "userEmail": null,
+    "status": "confirmed",
+    "items": [
+      {
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "productId": 2
+      }
+    ],
+    "total": 39,
+    "paymentMethod": "online",
+    "createdAt": "2026-07-16T09:09:53.354Z",
+    "subtotal": 39,
+    "shipping": 0
+  }
+]

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body data-signed-in="<%= user ? '1' : '' %>">
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Almost there</span>
+    <h1>Checkout</h1>
+    <p class="lead">Review your bag and complete your order.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <div class="checkout-layout" id="checkout-layout">
+      <div class="card" id="checkout-main">
+        <h3 style="font-size: 22px;">Your bag</h3>
+        <div id="checkout-items"></div>
+
+        <div id="checkout-form-area">
+          <hr class="divider">
+          <h3 style="font-size: 22px;">Delivery</h3>
+          <div class="field">
+            <label for="checkout-address">Delivery address</label>
+            <input id="checkout-address" type="text" placeholder="Street, city, country"
+                   value="<%= user && user.address ? user.address : '' %>">
+          </div>
+
+          <h3 style="font-size: 22px; margin-top: 26px;">Payment</h3>
+          <div class="pay-options">
+            <label class="pay-option is-selected">
+              <input type="radio" name="paymentMethod" value="online" checked>
+              <span class="pay-title">💳 Pay online</span>
+              <span class="pay-sub">Secure card payment</span>
+            </label>
+            <label class="pay-option">
+              <input type="radio" name="paymentMethod" value="delivery">
+              <span class="pay-title">📦 Pay on delivery</span>
+              <span class="pay-sub">Cash or card at your door</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" id="checkout-summary-card">
+          <h3 style="font-size: 22px;">Summary</h3>
+          <div id="checkout-summary"></div>
+          <% if (!user) { %>
+            <div class="notice" style="margin-bottom: 14px;">
+              Please <a href="/auth">sign in</a> to place your order — it only takes a minute and lets you track everything.
+            </div>
+          <% } %>
+          <button class="btn btn-primary btn-block" id="place-order" type="button" <%= user ? '' : 'disabled' %>>Place order</button>
+          <div class="form-status" id="checkout-status"></div>
+          <p class="text-muted" style="font-size: 12.5px; margin-top: 12px;">🔒 Your details are safe with us. Free shipping applies automatically over $50.</p>
+        </div>
+        <a class="btn btn-ghost btn-block" href="/shop" style="margin-top: 14px;">← Continue shopping</a>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'checkout' }) %>
+</body>
+</html>

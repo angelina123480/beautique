@@ -1,0 +1,38 @@
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/">BEAUTI<em>QUE</em></a>
+        <p style="max-width:34ch;">Radiant makeup, nourishing skincare, and elegant scents — curated for your everyday glow.</p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <a href="/shop?category=makeup">Makeup</a>
+        <a href="/shop?category=skincare">Skincare</a>
+        <a href="/shop?category=fragrance">Fragrance</a>
+        <a href="/shop">All products</a>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="/about">About us</a>
+        <a href="/contact">Contact</a>
+        <a href="/auth">My account</a>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <a href="/contact">Shipping &amp; returns</a>
+        <a href="/contact">Order support</a>
+        <a href="mailto:hello@lunabeauty.com">hello@lunabeauty.com</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <%= new Date().getFullYear() %> Beautique. Vegan &amp; cruelty-free, always. 🐰</span>
+      <span>Made with Node.js, Express &amp; EJS</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/javascripts/app.js"></script>
+<% if (typeof pageScript !== 'undefined' && pageScript) { %>
+<script src="/javascripts/<%= pageScript %>.js"></script>
+<% } %>

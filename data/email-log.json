@@ -1,0 +1,109 @@
+[
+  {
+    "id": 1784184443203,
+    "type": "otp",
+    "to": "angelina.abinader@net.usj.edu.lb",
+    "subject": "Your Beautique OTP code",
+    "variant": "modern",
+    "createdAt": "2026-07-16T06:47:23.203Z"
+  },
+  {
+    "id": 1784185013912,
+    "type": "otp",
+    "to": "test@example.com",
+    "subject": "Your Beautique OTP code",
+    "variant": "modern",
+    "createdAt": "2026-07-16T06:56:53.912Z"
+  },
+  {
+    "id": 1784186084853,
+    "type": "otp",
+    "to": "admin@luna.com",
+    "subject": "Your Beautique OTP code",
+    "variant": "modern",
+    "createdAt": "2026-07-16T07:14:44.853Z"
+  },
+  {
+    "id": 1784186097137,
+    "type": "otp",
+    "to": "admin@luna.com",
+    "subject": "Your Beautique OTP code",
+    "variant": "modern",
+    "createdAt": "2026-07-16T07:14:57.137Z"
+  },
+  {
+    "id": 1784186127989,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Your Beautique order is confirmed",
+    "variant": "modern",
+    "createdAt": "2026-07-16T07:15:27.990Z"
+  },
+  {
+    "id": 1784186127996,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "A quick update from Beautique",
+    "variant": "modern",
+    "createdAt": "2026-07-16T07:15:27.996Z"
+  },
+  {
+    "id": 1784190641324,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Your Beautique order is confirmed",
+    "variant": "modern",
+    "createdAt": "2026-07-16T08:30:41.324Z"
+  },
+  {
+    "id": 1784190641362,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "A quick update from Beautique",
+    "variant": "modern",
+    "createdAt": "2026-07-16T08:30:41.362Z"
+  },
+  {
+    "id": 1784190666098,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Your Beautique order is confirmed",
+    "variant": "modern",
+    "createdAt": "2026-07-16T08:31:06.098Z"
+  },
+  {
+    "id": 1784190666100,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "A quick update from Beautique",
+    "variant": "modern",
+    "createdAt": "2026-07-16T08:31:06.100Z"
+  },
+  {
+    "id": 1784199163164,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (4/5)",
+    "variant": "modern",
+    "delivered": false,
+    "createdAt": "2026-07-16T10:52:43.164Z"
+  },
+  {
+    "id": 1784199163302,
+    "type": "contact_message",
+    "to": "admin@luna.com",
+    "subject": "New message from Visitor",
+    "variant": "modern",
+    "delivered": false,
+    "createdAt": "2026-07-16T10:52:43.302Z"
+  },
+  {
+    "id": 1784203304149,
+    "type": "otp",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Your Beautique verification code",
+    "variant": "friendly",
+    "delivered": false,
+    "createdAt": "2026-07-16T12:01:44.149Z"
+  }
+]

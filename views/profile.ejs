@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">My account</span>
+    <h1>Hello, <%= user.name.split(' ')[0] %> 👋</h1>
+    <p class="lead">Manage your details and keep an eye on your orders.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 60px;">
+    <div class="grid grid-2" style="align-items: start;">
+      <div class="card">
+        <h3 style="font-size: 22px;">Your information</h3>
+        <form id="profile-form">
+          <div class="field">
+            <label for="profile-name">Full name</label>
+            <input id="profile-name" type="text" value="<%= user.name %>" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="profile-email">Email address</label>
+            <input id="profile-email" type="email" value="<%= user.email %>" autocomplete="email">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="profile-phone">Phone</label>
+              <input id="profile-phone" type="tel" value="<%= user.phone %>" autocomplete="tel" placeholder="+1 …">
+            </div>
+            <div class="field">
+              <label for="profile-address">Delivery address</label>
+              <input id="profile-address" type="text" value="<%= user.address %>" autocomplete="street-address" placeholder="Street, city, country">
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">Save changes</button>
+          <div class="form-status" id="profile-status"></div>
+        </form>
+        <hr class="divider">
+        <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+          <% if (user.role === 'admin') { %>
+            <a class="btn btn-dark btn-sm" href="/admin">Open admin dashboard</a>
+          <% } %>
+          <button class="btn btn-ghost btn-sm" id="signout-button" type="button">Sign out</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 22px;">Your orders</h3>
+        <div id="orders-list"><p class="text-muted">Loading your orders…</p></div>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'profile' }) %>
+</body>
+</html>

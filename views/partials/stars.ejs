@@ -1,0 +1,7 @@
+<% var full = Math.round(rating || 0); %>
+<span class="stars" title="<%= rating %> out of 5">
+  <span><%- '★'.repeat(full) + '☆'.repeat(5 - full) %></span>
+  <% if (typeof count !== 'undefined') { %>
+    <span class="stars-count"><%= rating %> (<%= count %>)</span>
+  <% } %>
+</span>

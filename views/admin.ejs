@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Beautique HQ</span>
+    <h1>Admin dashboard</h1>
+    <p class="lead">Inventory, orders, reviews, and customer messages — all in one place.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-label">Revenue</span>
+        <div class="stat-value"><%= money(stats.revenue) %></div>
+        <span class="stat-sub">across <%= stats.orders %> orders</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Open orders</span>
+        <div class="stat-value"><%= stats.pending %></div>
+        <span class="stat-sub">awaiting shipment</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Products</span>
+        <div class="stat-value"><%= stats.products %></div>
+        <span class="stat-sub"><%= stats.lowStock %> low on stock</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Customers</span>
+        <div class="stat-value"><%= stats.customers %></div>
+        <span class="stat-sub"><%= stats.reviews %> reviews shared</span>
+      </div>
+    </div>
+
+    <div class="tab-row" role="tablist">
+      <button type="button" class="is-active" data-tab="products">Products</button>
+      <button type="button" data-tab="orders">Orders (<%= orders.length %>)</button>
+      <button type="button" data-tab="reviews">Reviews (<%= reviews.length %>)</button>
+      <button type="button" data-tab="messages">Messages (<%= messages.length %>)</button>
+    </div>
+
+    <!-- Products -->
+    <div class="tab-panel is-active" id="tab-products">
+      <div class="card">
+        <div class="section-head" style="margin-bottom: 18px;">
+          <h3 style="font-size: 22px; margin: 0;">Inventory</h3>
+          <button class="btn btn-primary btn-sm" id="add-product-open" type="button">+ Add product</button>
+        </div>
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Price ($)</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th>Rating</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach(function(product) { %>
+                <tr data-product-row="<%= product.id %>">
+                  <td>
+                    <div style="display:flex; align-items:center; gap: 12px;">
+                      <span class="product-art product-art--sm" style="--tone: <%= product.tone %>; width: 46px; border-radius: 12px;"><span class="art-emoji" style="font-size: 22px;"><%= product.emoji %></span></span>
+                      <div>
+                        <strong><%= product.name %></strong><br>
+                        <span class="text-muted" style="font-size: 12.5px;"><%= product.brand %> · <%= product.category %></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><input class="input input-sm" type="number" min="0" step="0.01" name="price" value="<%= product.price %>"></td>
+                  <td><input class="input input-sm" type="number" min="0" name="stock" value="<%= product.stock %>"></td>
+                  <td>
+                    <label style="font-size: 13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                      <input type="checkbox" name="soldOut" <%= product.soldOut ? 'checked' : '' %>> Sold out
+                    </label>
+                  </td>
+                  <td>
+                    <% if (product.reviewCount) { %>
+                      <span class="stars" style="font-size: 12px;"><%= product.rating %> ★ (<%= product.reviewCount %>)</span>
+                    <% } else { %>
+                      <span class="text-muted" style="font-size: 12.5px;">—</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn btn-soft btn-sm" data-save-product="<%= product.id %>" type="button">Save</button>
+                      <button class="btn btn-danger btn-sm" data-delete-product="<%= product.id %>" data-product-name="<%= product.name %>" type="button">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders -->
+    <div class="tab-panel" id="tab-orders">
+      <div class="card">
+        <h3 style="font-size: 22px;">Orders</h3>
+        <% if (!orders.length) { %>
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji">📦</span>
+            <h3>No orders yet</h3>
+          </div>
+        <% } else { %>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% orders.forEach(function(order) { %>
+                  <tr>
+                    <td>
+                      <strong>#<%= order.id %></strong><br>
+                      <span class="text-muted" style="font-size: 12px;"><%= dateTimeLabel(order.createdAt) %></span>
+                    </td>
+                    <td style="font-size: 13.5px;"><%= order.userEmail || 'Guest' %></td>
+                    <td style="font-size: 13px;">
+                      <% (order.items || []).forEach(function(item) { %>
+                        <%= item.quantity %>× <%= item.name %><br>
+                      <% }); %>
+                    </td>
+                    <td><strong><%= money(order.total) %></strong></td>
+                    <td style="font-size: 13px; text-transform: capitalize;"><%= order.paymentMethod || '—' %></td>
+                    <td><span class="status-pill status-<%= order.status %>"><%= order.status %></span></td>
+                    <td>
+                      <div class="table-actions">
+                        <% if (order.status === 'confirmed') { %>
+                          <button class="btn btn-soft btn-sm" data-order-status="<%= order.id %>" data-status="shipped" type="button">Mark shipped</button>
+                          <button class="btn btn-danger btn-sm" data-order-cancel="<%= order.id %>" type="button">Cancel</button>
+                        <% } else if (order.status === 'shipped') { %>
+                          <button class="btn btn-soft btn-sm" data-order-status="<%= order.id %>" data-status="delivered" type="button">Mark delivered</button>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="tab-panel" id="tab-reviews">
+      <div class="card">
+        <h3 style="font-size: 22px;">Customer reviews</h3>
+        <% if (!reviews.length) { %>
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji">💬</span>
+            <h3>No reviews yet</h3>
+          </div>
+        <% } else { %>
+          <% reviews.forEach(function(review) { %>
+            <div class="review-item">
+              <div class="review-item-head">
+                <strong><%= review.productName %></strong>
+                <span class="stars"><%- '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating) %></span>
+                <% if (review.verified) { %><span class="verified-tag">✓ Verified purchase</span><% } %>
+                <span class="review-date">by <%= review.userName %> · <%= dateLabel(review.createdAt) %></span>
+              </div>
+              <% if (review.comment) { %><p><%= review.comment %></p><% } %>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="card">
+        <h3 style="font-size: 22px;">Contact messages</h3>
+        <% if (!messages.length) { %>
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji">💌</span>
+            <h3>No messages yet</h3>
+          </div>
+        <% } else { %>
+          <% messages.forEach(function(message) { %>
+            <div class="review-item">
+              <div class="review-item-head">
+                <strong><%= message.name %></strong>
+                <a href="mailto:<%= message.email %>" style="font-size: 13px;"><%= message.email %></a>
+                <span class="review-date"><%= dateTimeLabel(message.createdAt) %></span>
+              </div>
+              <p><%= message.message %></p>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Add product modal -->
+  <div class="modal-backdrop" id="add-product-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Add new product</h3>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+      </div>
+      <form id="add-product-form">
+        <div class="field-row">
+          <div class="field"><label>Name *</label><input name="name" type="text" required placeholder="Rose Petal Balm"></div>
+          <div class="field"><label>Brand *</label><input name="brand" type="text" required placeholder="Luna"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Price ($) *</label><input name="price" type="number" min="0" step="0.01" required placeholder="24.00"></div>
+          <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="10"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Category</label>
+            <select name="category">
+              <option value="makeup">Makeup</option>
+              <option value="skincare">Skincare</option>
+              <option value="fragrance">Fragrance</option>
+            </select>
+          </div>
+          <div class="field"><label>Badge</label><input name="badge" type="text" placeholder="New"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="💄" maxlength="4"></div>
+          <div class="field"><label>Image URL (optional)</label><input name="image" type="url" placeholder="https://…"></div>
+        </div>
+        <div class="field"><label>Description *</label><textarea name="description" required placeholder="A soft matte finish with lasting comfort."></textarea></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
+          <button class="btn btn-primary btn-sm" type="submit">Add product</button>
+        </div>
+        <div class="form-status" id="add-product-status"></div>
+      </form>
+    </div>
+  </div>
+
+  <%- include('partials/footer', { pageScript: 'admin' }) %>
+</body>
+</html>

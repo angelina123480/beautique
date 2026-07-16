@@ -1,0 +1,106 @@
+<div class="announce">
+  <div class="container">
+    <span class="announce-msg">✨ Free shipping on orders over $50 — vegan &amp; cruelty-free, always</span>
+    <button type="button" class="announce-deliver" id="deliver-pill" data-signed-in="<%= user ? '1' : '' %>" title="Set your delivery address">
+      📍 <span id="deliver-pill-text"><%= user && user.address ? user.address : 'Set delivery address' %></span>
+    </button>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="container">
+    <a class="brand" href="/">BEAUTI<em>QUE</em></a>
+
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
+      <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
+      <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
+      <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
+      <% if (user && user.role === 'admin') { %>
+        <a href="/admin" class="<%= menuId === 'admin' ? 'is-active' : '' %>">Dashboard</a>
+      <% } %>
+    </nav>
+
+    <div class="header-actions">
+      <a class="icon-btn" href="<%= user ? '/profile' : '/auth' %>" title="<%= user ? 'My account' : 'Sign in' %>" aria-label="Account">
+        <%= user ? '👤' : '🔑' %>
+      </a>
+      <button class="icon-btn" id="cart-open" type="button" title="Your bag" aria-label="Open shopping bag">
+        🛍️
+        <span class="cart-count-badge" id="cart-count-badge">0</span>
+      </button>
+      <button class="icon-btn nav-toggle" id="nav-toggle" type="button" aria-label="Toggle menu">☰</button>
+    </div>
+  </div>
+
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
+    <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
+    <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
+    <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
+    <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/admin" class="<%= menuId === 'admin' ? 'is-active' : '' %>">Dashboard</a>
+    <% } %>
+    <a href="<%= user ? '/profile' : '/auth' %>"><%= user ? 'My account' : 'Sign in' %></a>
+  </nav>
+</header>
+
+<!-- Cart drawer -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<aside class="cart-drawer" id="cart-drawer" aria-label="Shopping bag">
+  <div class="cart-drawer-head">
+    <h3>Your bag</h3>
+    <button class="modal-close" id="cart-close" type="button" aria-label="Close bag">✕</button>
+  </div>
+  <div class="cart-drawer-body" id="cart-body"></div>
+  <div class="cart-drawer-foot" id="cart-foot"></div>
+</aside>
+
+<!-- Delivery address modal -->
+<div class="modal-backdrop" id="deliver-modal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div>
+        <h3>Delivery location</h3>
+        <p class="text-muted" style="margin:4px 0 0; font-size:14px;">Type your address or pick a point on the map.</p>
+      </div>
+      <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="field">
+      <label for="deliver-input">Address</label>
+      <input class="input" id="deliver-input" type="text" placeholder="Street, city, country"
+             value="<%= user && user.address ? user.address : '' %>">
+    </div>
+    <div class="map-layout">
+      <div id="map-canvas"></div>
+      <div>
+        <p style="font-weight:700; font-size:14px; margin-bottom:6px;">Selected location</p>
+        <p id="map-status" class="text-muted" style="font-size:13.5px; min-height:60px;">Open the map by clicking “Load map”, then click anywhere to drop a pin.</p>
+        <button class="btn btn-soft btn-sm btn-block" id="map-load" type="button" style="margin-bottom:10px;">🗺️ Load map</button>
+        <button class="btn btn-ghost btn-sm btn-block" id="map-locate" type="button" style="margin-bottom:10px;">📡 Use my current location</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="deliver-save" type="button">Save address</button>
+    </div>
+    <div class="form-status" id="deliver-status"></div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="modal-backdrop" id="confirm-modal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <h3 id="confirm-title">Are you sure?</h3>
+      <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+    </div>
+    <p id="confirm-text" class="text-muted" style="font-size:14.5px;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" data-close-modal type="button">Keep it</button>
+      <button class="btn btn-danger btn-sm" id="confirm-yes" type="button">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
