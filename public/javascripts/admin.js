@@ -54,6 +54,23 @@
       return;
     }
 
+    var deleteCategoryBtn = e.target.closest('[data-delete-category]');
+    if (deleteCategoryBtn) {
+      var categoryId = deleteCategoryBtn.getAttribute('data-delete-category');
+      var categoryTitle = deleteCategoryBtn.getAttribute('data-category-title');
+      B.confirmDialog('Delete "' + categoryTitle + '"?', 'This removes the category. Move or delete its products first if it has any.')
+        .then(function (confirmed) {
+          if (!confirmed) return;
+          B.api('/api/categories/' + categoryId, { method: 'DELETE' })
+            .then(function () {
+              B.toast('Category deleted.');
+              deleteCategoryBtn.closest('tr').remove();
+            })
+            .catch(function (err) { B.toast(err.message, 'error'); });
+        });
+      return;
+    }
+
     var statusBtn = e.target.closest('[data-order-status]');
     if (statusBtn) {
       B.api('/api/orders/' + statusBtn.getAttribute('data-order-status') + '/status', {
@@ -307,6 +324,51 @@
         setTimeout(function () { window.location.reload(); }, 700);
       }).catch(function (err) {
         setStatus(err.message, 'error');
+      });
+    });
+  }
+
+  /* Add category */
+  var categoryForm = B.$('#add-category-form');
+  if (categoryForm) {
+    var categoryStatus = B.$('#add-category-status');
+    var toneInput = B.$('#category-tone-input');
+    var tonePreview = B.$('#category-tone-preview');
+
+    function paintTonePreview() {
+      var tone = Math.min(360, Math.max(0, Number(toneInput.value) || 0));
+      tonePreview.style.background = 'hsl(' + tone + ' 72% 88%)';
+    }
+    toneInput.addEventListener('input', paintTonePreview);
+
+    var categoryOpenBtn = B.$('#add-category-open');
+    if (categoryOpenBtn) {
+      categoryOpenBtn.addEventListener('click', function () {
+        categoryForm.reset();
+        toneInput.value = 200;
+        paintTonePreview();
+        categoryStatus.textContent = '';
+        categoryStatus.className = 'form-status';
+        B.openModal('add-category-modal');
+      });
+    }
+
+    categoryForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = categoryForm;
+      var payload = {
+        title: f.elements.title.value.trim(),
+        emoji: f.elements.emoji.value.trim() || '🌸',
+        tone: Number(f.elements.tone.value) || 0,
+        text: f.elements.text.value.trim()
+      };
+
+      B.api('/api/categories', { method: 'POST', body: payload }).then(function () {
+        B.toast('Category added 🎀');
+        setTimeout(function () { window.location.reload(); }, 700);
+      }).catch(function (err) {
+        categoryStatus.textContent = err.message;
+        categoryStatus.className = 'form-status is-error';
       });
     });
   }

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "makeup",
+    "title": "Makeup",
+    "emoji": "💄",
+    "tone": 340,
+    "text": "Bold color, refined finish, and everyday essentials."
+  },
+  {
+    "id": "skincare",
+    "title": "Skincare",
+    "emoji": "🫧",
+    "tone": 195,
+    "text": "Gentle hydration for a glow that feels healthy."
+  },
+  {
+    "id": "fragrance",
+    "title": "Fragrance",
+    "emoji": "🌼",
+    "tone": 45,
+    "text": "Fresh, floral, and confident signature scents."
+  }
+]

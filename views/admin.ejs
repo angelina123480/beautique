@@ -38,6 +38,7 @@
 
     <div class="tab-row" role="tablist">
       <button type="button" class="is-active" data-tab="products">Products</button>
+      <button type="button" data-tab="categories">Categories (<%= categories.length %>)</button>
       <button type="button" data-tab="orders">Orders (<%= orders.length %>)</button>
       <button type="button" data-tab="reviews">Reviews (<%= reviews.length %>)</button>
       <button type="button" data-tab="messages">Messages (<%= messages.length %>)</button>
@@ -100,6 +101,51 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="tab-panel" id="tab-categories">
+      <div class="card">
+        <div class="section-head" style="margin-bottom: 18px;">
+          <h3 style="font-size: 22px; margin: 0;">Shop categories</h3>
+          <button class="btn btn-primary btn-sm" id="add-category-open" type="button">+ Add category</button>
+        </div>
+        <% if (!categories.length) { %>
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji">🗂️</span>
+            <h3>No categories yet</h3>
+          </div>
+        <% } else { %>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Category</th><th>Products</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% categories.forEach(function(category) { %>
+                  <tr>
+                    <td>
+                      <div style="display:flex; align-items:center; gap: 12px;">
+                        <span class="product-art product-art--sm" style="--tone: <%= category.tone %>; width: 42px; border-radius: 12px;"><span class="art-emoji" style="font-size: 20px;"><%= category.emoji %></span></span>
+                        <div>
+                          <strong><%= category.title %></strong><br>
+                          <span class="text-muted" style="font-size: 12.5px;"><%= category.id %></span>
+                        </div>
+                      </div>
+                    </td>
+                    <td><%= category.productCount %></td>
+                    <td>
+                      <div class="table-actions">
+                        <button class="btn btn-danger btn-sm" data-delete-category="<%= category.id %>" data-category-title="<%= category.title %>" type="button">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
       </div>
     </div>
 
@@ -230,9 +276,9 @@
           <div class="field">
             <label>Category</label>
             <select name="category">
-              <option value="makeup">Makeup</option>
-              <option value="skincare">Skincare</option>
-              <option value="fragrance">Fragrance</option>
+              <% categories.forEach(function(category) { %>
+                <option value="<%= category.id %>"><%= category.emoji %> <%= category.title %></option>
+              <% }); %>
             </select>
           </div>
           <div class="field"><label>Badge</label><input name="badge" type="text" placeholder="New"></div>
@@ -259,6 +305,35 @@
           <button class="btn btn-primary btn-sm" id="product-submit-btn" type="submit">Add product</button>
         </div>
         <div class="form-status" id="add-product-status"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add category modal -->
+  <div class="modal-backdrop" id="add-category-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Add category</h3>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+      </div>
+      <form id="add-category-form">
+        <div class="field"><label>Name *</label><input name="title" type="text" required placeholder="Haircare"></div>
+        <div class="field-row">
+          <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="🧴" maxlength="4"></div>
+          <div class="field">
+            <label>Color tone <span class="text-muted" style="font-weight:400;">(0–360)</span></label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input name="tone" id="category-tone-input" type="number" min="0" max="360" value="200" style="flex:1;">
+              <span id="category-tone-preview" style="width:32px; height:32px; border-radius:50%; flex:none; background: hsl(200 72% 88%); border: 1px solid var(--border);"></span>
+            </div>
+          </div>
+        </div>
+        <div class="field"><label>Short description</label><textarea name="text" placeholder="Nourishing care for every hair type."></textarea></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
+          <button class="btn btn-primary btn-sm" type="submit">Add category</button>
+        </div>
+        <div class="form-status" id="add-category-status"></div>
       </form>
     </div>
   </div>

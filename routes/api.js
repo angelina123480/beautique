@@ -311,6 +311,69 @@ router.post('/profile/delete', auth.requireUser, ah(async (req, res) => {
 }));
 
 /* ------------------------------------------------------------------ *
+ * Categories
+ * ------------------------------------------------------------------ */
+
+function slugify(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+router.get('/categories', ah(async (req, res) => {
+  res.json({ ok: true, categories: await store.read('categories') });
+}));
+
+router.post('/categories', auth.requireAdmin, ah(async (req, res) => {
+  const payload = req.body || {};
+  const title = String(payload.title || '').trim();
+  if (!title) {
+    return res.status(400).json({ ok: false, message: 'A category name is required.' });
+  }
+
+  const id = slugify(title);
+  if (!id) {
+    return res.status(400).json({ ok: false, message: 'That name doesn\'t produce a usable category id — try adding some letters or numbers.' });
+  }
+
+  const categories = await store.read('categories');
+  if (categories.some((entry) => entry.id === id)) {
+    return res.status(409).json({ ok: false, message: 'A category with that name already exists.' });
+  }
+
+  const category = {
+    id,
+    title,
+    emoji: String(payload.emoji || '').trim() || '🌸',
+    tone: Math.min(360, Math.max(0, Math.round(Number(payload.tone)) || 0)),
+    text: String(payload.text || '').trim()
+  };
+  categories.push(category);
+  await store.write('categories', categories);
+  res.json({ ok: true, category });
+}));
+
+router.delete('/categories/:id', auth.requireAdmin, ah(async (req, res) => {
+  const categories = await store.read('categories');
+  const index = categories.findIndex((entry) => entry.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ ok: false, message: 'Category not found.' });
+  }
+
+  const products = await store.read('products');
+  const inUse = products.some((product) => product.category === req.params.id);
+  if (inUse) {
+    return res.status(400).json({ ok: false, message: 'Move or delete the products in this category before removing it.' });
+  }
+
+  const removed = categories.splice(index, 1)[0];
+  await store.write('categories', categories);
+  res.json({ ok: true, category: removed });
+}));
+
+/* ------------------------------------------------------------------ *
  * Products
  * ------------------------------------------------------------------ */
 
@@ -326,13 +389,13 @@ router.post('/uploads', auth.requireAdmin, uploadSingleImage, ah(async (req, res
   res.json({ ok: true, url });
 }));
 
-function applyProductFields(product, payload) {
+function applyProductFields(product, payload, validCategoryIds) {
   if (payload.name !== undefined) product.name = String(payload.name).trim();
   if (payload.brand !== undefined) product.brand = String(payload.brand).trim();
   if (payload.price !== undefined) product.price = Math.max(0, Number(payload.price) || 0);
   if (payload.badge !== undefined) product.badge = String(payload.badge).trim();
   if (payload.emoji !== undefined) product.emoji = String(payload.emoji).trim();
-  if (payload.category !== undefined && ['makeup', 'skincare', 'fragrance'].includes(payload.category)) {
+  if (payload.category !== undefined && validCategoryIds.has(payload.category)) {
     product.category = payload.category;
   }
   if (payload.description !== undefined) product.description = String(payload.description).trim();
@@ -382,7 +445,8 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Name, brand, price, and description are required.' });
   }
 
-  const products = await store.read('products');
+  const [products, categories] = await Promise.all([store.read('products'), store.read('categories')]);
+  const validCategoryIds = new Set(categories.map((entry) => entry.id));
   const product = {
     id: store.nextId(products),
     name: '',
@@ -390,7 +454,7 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     price: 0,
     badge: '',
     emoji: '🌸',
-    category: 'makeup',
+    category: validCategoryIds.has('makeup') ? 'makeup' : (categories[0] && categories[0].id) || '',
     tone: Math.floor(Math.random() * 360),
     description: '',
     stock: 0,
@@ -399,7 +463,7 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     modelImage: '',
     reviews: []
   };
-  applyProductFields(product, payload);
+  applyProductFields(product, payload, validCategoryIds);
 
   products.push(product);
   await store.write('products', products);
@@ -413,7 +477,8 @@ router.patch('/products/:id', auth.requireAdmin, ah(async (req, res) => {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
-  applyProductFields(product, req.body || {});
+  const validCategoryIds = new Set((await store.read('categories')).map((entry) => entry.id));
+  applyProductFields(product, req.body || {}, validCategoryIds);
   await store.write('products', products);
   res.json({ ok: true, product: catalog.decorate(product) });
 }));

@@ -23,7 +23,7 @@ router.get('/', ah(async (req, res) => {
   const products = await catalog.getProducts();
   const featured = products.slice().sort(SORTS.featured).slice(0, 3);
   const arrivals = products.slice().sort((a, b) => b.id - a.id).slice(0, 4);
-  const categories = store.CATEGORIES.map((category) => Object.assign({}, category, {
+  const categories = (await store.read('categories')).map((category) => Object.assign({}, category, {
     count: products.filter((product) => product.category === category.id).length
   }));
 
@@ -37,8 +37,9 @@ router.get('/', ah(async (req, res) => {
 }));
 
 router.get('/shop', ah(async (req, res) => {
+  const allCategories = await store.read('categories');
   const searchTerm = String(req.query.search || '').trim();
-  const category = ['makeup', 'skincare', 'fragrance'].includes(req.query.category) ? req.query.category : '';
+  const category = allCategories.some((entry) => entry.id === req.query.category) ? req.query.category : '';
   const sort = SORTS[req.query.sort] ? req.query.sort : 'featured';
 
   let products = await catalog.getProducts();
@@ -58,7 +59,7 @@ router.get('/shop', ah(async (req, res) => {
     page: 'Shop',
     menuId: 'shop',
     products,
-    categories: store.CATEGORIES,
+    categories: allCategories,
     searchTerm,
     activeCategory: category,
     activeSort: sort
@@ -116,6 +117,9 @@ router.get('/admin', ah(async (req, res) => {
   const orders = (await store.read('orders')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const messages = (await store.read('messages')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const users = await store.read('users');
+  const categories = (await store.read('categories')).map((category) => Object.assign({}, category, {
+    productCount: products.filter((product) => product.category === category.id).length
+  }));
 
   const adminIds = new Set(users.filter((user) => user.role === 'admin').map((user) => user.id));
   /* Admins can shop too, but their own test/personal orders shouldn't
@@ -147,6 +151,7 @@ router.get('/admin', ah(async (req, res) => {
     orders,
     reviews,
     messages,
+    categories,
     stats
   });
 }));
