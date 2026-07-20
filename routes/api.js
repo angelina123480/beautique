@@ -343,10 +343,33 @@ function applyProductFields(product, payload) {
   }
   if (payload.shades !== undefined) {
     if (Array.isArray(payload.shades)) {
-      product.shades = payload.shades.map(String).map((value) => value.trim()).filter(Boolean);
+      product.shades = payload.shades.map((shade) => {
+        if (shade && typeof shade === 'object') {
+          const name = String(shade.name || '').trim();
+          if (!name) return null;
+          const normalized = {
+            name,
+            label: String(shade.label || name).trim() || name,
+            color: String(shade.color || '').trim() || '#d9a08b'
+          };
+          if (Array.isArray(shade.images)) {
+            normalized.images = shade.images.map(String).map((value) => value.trim()).filter(Boolean);
+          }
+          if (shade.tintPhotos) {
+            normalized.tintPhotos = true;
+          }
+          return normalized;
+        }
+        const name = String(shade).trim();
+        return name ? { name, label: name, color: '#d9a08b' } : null;
+      }).filter(Boolean);
     } else if (typeof payload.shades === 'string') {
-      product.shades = payload.shades.split(',').map((value) => value.trim()).filter(Boolean);
+      product.shades = payload.shades.split(',').map((value) => value.trim()).filter(Boolean)
+        .map((name) => ({ name, label: name, color: '#d9a08b' }));
     }
+  }
+  if (payload.winkMap !== undefined && payload.winkMap && typeof payload.winkMap === 'object' && !Array.isArray(payload.winkMap)) {
+    product.winkMap = payload.winkMap;
   }
   if (payload.modelImage !== undefined) product.modelImage = String(payload.modelImage).trim();
   if (product.stock <= 0) product.soldOut = true;
