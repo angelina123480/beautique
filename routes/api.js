@@ -73,7 +73,10 @@ async function issueOtp(users, user) {
   user.otp = otp;
   user.otpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
   await store.write('users', users);
-  emailService.sendEmail('otp', user.email, { firstName: user.name, otp }).catch(() => {});
+  /* Must be awaited, not fire-and-forget — on Vercel the function can be
+     frozen the instant the response goes out, killing any still-pending
+     background work before it actually reaches Resend. */
+  await emailService.sendEmail('otp', user.email, { firstName: user.name, otp }).catch(() => {});
   return emailService.isConfigured() ? undefined : otp;
 }
 
@@ -83,7 +86,7 @@ async function issueResetOtp(users, user) {
   user.resetOtp = otp;
   user.resetOtpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
   await store.write('users', users);
-  emailService.sendEmail('password_reset', user.email, { firstName: user.name, otp }).catch(() => {});
+  await emailService.sendEmail('password_reset', user.email, { firstName: user.name, otp }).catch(() => {});
   return emailService.isConfigured() ? undefined : otp;
 }
 
@@ -441,7 +444,7 @@ router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
 
   const admin = (await store.read('users')).find((account) => account.role === 'admin');
   if (admin && admin.email) {
-    emailService.sendEmail('review_notification', admin.email, {
+    await emailService.sendEmail('review_notification', admin.email, {
       firstName: admin.name,
       reviewerName: review.userName,
       productName: product.name,
@@ -595,13 +598,13 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
   const itemsSummary = orderItems
     .map((item) => '  • ' + item.quantity + ' × ' + item.name + (item.shade ? ' (' + item.shade + ')' : '') + ' ($' + item.price.toFixed(2) + ')')
     .join('\n');
-  emailService.sendEmail('order_confirmation', req.user.email, {
+  await emailService.sendEmail('order_confirmation', req.user.email, {
     firstName: req.user.name,
     orderNumber: order.id,
     total: total.toFixed(2),
     itemsSummary
   }).catch(console.error);
-  emailService.sendEmail('follow_up', req.user.email, { firstName: req.user.name }).catch(console.error);
+  await emailService.sendEmail('follow_up', req.user.email, { firstName: req.user.name }).catch(console.error);
 
   res.json({ ok: true, order });
 }));
@@ -639,7 +642,7 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
   await store.write('orders', orders);
 
   if (order.userEmail) {
-    emailService.sendEmail('order_cancellation', order.userEmail, {
+    await emailService.sendEmail('order_cancellation', order.userEmail, {
       firstName: req.user.name,
       orderNumber: order.id,
       total: Number(order.total || 0).toFixed(2)
@@ -670,7 +673,7 @@ router.post('/orders/:orderId/status', auth.requireAdmin, ah(async (req, res) =>
 
   if (order.userEmail && status !== 'confirmed') {
     const customer = (await store.read('users')).find((entry) => entry.id === order.userId);
-    emailService.sendEmail('order_status', order.userEmail, {
+    await emailService.sendEmail('order_status', order.userEmail, {
       firstName: customer ? customer.name : 'there',
       orderNumber: order.id,
       status
@@ -706,7 +709,7 @@ router.post('/contact', ah(async (req, res) => {
 
   const admin = (await store.read('users')).find((account) => account.role === 'admin');
   if (admin && admin.email) {
-    emailService.sendEmail('contact_message', admin.email, {
+    await emailService.sendEmail('contact_message', admin.email, {
       firstName: admin.name,
       senderName: name,
       senderEmail: email,
