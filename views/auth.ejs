@@ -32,7 +32,11 @@
             </div>
             <div class="field">
               <label for="auth-password">Password</label>
-              <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+              <div class="password-field">
+                <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+                <button type="button" class="password-toggle" data-target="auth-password" aria-label="Show password">👁️</button>
+              </div>
+              <a href="#" id="auth-forgot-link" class="text-muted" style="display:block; margin-top:6px; font-size:13px; text-align:right;">Forgot password?</a>
             </div>
             <div class="field" id="field-role" style="display:none;">
               <label for="auth-role">Account type</label>
@@ -67,6 +71,44 @@
           <button class="btn btn-primary btn-block" type="button" id="otp-submit" style="margin-top: 16px;">Verify code</button>
           <p class="text-center" style="margin-top: 14px; font-size: 14px;">
             Didn't get it? <a href="#" id="otp-resend">Resend code</a> · <a href="#" id="otp-back">Start over</a>
+          </p>
+        </div>
+
+        <div id="forgot-step" style="display:none;">
+          <div class="text-center">
+            <span style="font-size: 40px;">🔑</span>
+            <h3 style="font-size: 22px; margin-top: 8px;">Reset your password</h3>
+            <p class="text-muted" style="font-size: 14.5px;" id="forgot-intro">Enter your email and we'll send you a reset code.</p>
+          </div>
+
+          <div class="field" id="forgot-email-field">
+            <label for="forgot-email">Email address</label>
+            <input id="forgot-email" type="email" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <button class="btn btn-primary btn-block" type="button" id="forgot-send">Send reset code</button>
+
+          <div id="forgot-reset-fields" style="display:none;">
+            <div class="otp-inputs" id="reset-otp-inputs">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 1">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6">
+            </div>
+            <div id="forgot-dev-otp-note" class="dev-note" style="display:none;"></div>
+            <div class="field" style="margin-top: 14px;">
+              <label for="forgot-password">New password</label>
+              <div class="password-field">
+                <input id="forgot-password" type="password" placeholder="••••••••" autocomplete="new-password">
+                <button type="button" class="password-toggle" data-target="forgot-password" aria-label="Show password">👁️</button>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-block" type="button" id="forgot-submit" style="margin-top: 16px;">Reset password</button>
+          </div>
+
+          <p class="text-center" style="margin-top: 14px; font-size: 14px;">
+            <a href="#" id="forgot-back">Back to sign in</a>
           </p>
         </div>
 

@@ -15,12 +15,21 @@
 
   function api(url, options) {
     options = options || {};
-    return fetch(url, {
+    /* FormData (file uploads) needs to go through as-is, with no
+       Content-Type set — the browser fills in the multipart boundary
+       itself. Everything else keeps going through as JSON like before. */
+    var isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    var fetchOptions = {
       method: options.method || 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: options.body ? JSON.stringify(options.body) : undefined
-    }).then(function (res) {
+      credentials: 'same-origin'
+    };
+    if (isFormData) {
+      fetchOptions.body = options.body;
+    } else if (options.body) {
+      fetchOptions.headers = { 'Content-Type': 'application/json' };
+      fetchOptions.body = JSON.stringify(options.body);
+    }
+    return fetch(url, fetchOptions).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {
         if (!res.ok) {
           var err = new Error(data.message || 'Something went wrong. Please try again.');
@@ -103,6 +112,18 @@
     }
   });
 
+  /* Show/hide password toggle — lets people check for typos before submitting. */
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest('.password-toggle');
+    if (!toggle) return;
+    var input = document.getElementById(toggle.getAttribute('data-target'));
+    if (!input) return;
+    var showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    toggle.textContent = showing ? '👁️' : '🙈';
+    toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  });
+
   /* ---------------- Mobile nav ---------------- */
 
   var navToggle = $('#nav-toggle');
@@ -161,9 +182,9 @@
     saveCart(cart);
   }
 
-  function setQuantity(id, quantity) {
+  function setQuantity(id, shade, quantity) {
     var cart = getCart();
-    var line = cart.find(function (item) { return item.id === id; });
+    var line = cart.find(function (item) { return item.id === id && item.shade === shade; });
     if (!line) return;
     var stock = Number(line.stock) || 99;
     if (quantity > stock) {
@@ -171,15 +192,15 @@
       toast('Only ' + stock + ' in stock.', 'error');
     }
     if (quantity <= 0) {
-      cart = cart.filter(function (item) { return item.id !== id; });
+      cart = cart.filter(function (item) { return !(item.id === id && item.shade === shade); });
     } else {
       line.quantity = quantity;
     }
     saveCart(cart);
   }
 
-  function removeFromCart(id) {
-    saveCart(getCart().filter(function (item) { return item.id !== id; }));
+  function removeFromCart(id, shade) {
+    saveCart(getCart().filter(function (item) { return !(item.id === id && item.shade === shade); }));
   }
 
   function clearCart() {
@@ -187,19 +208,20 @@
   }
 
   function cartLineHtml(item) {
+    var shadeAttr = escapeHtml(item.shade || '');
     return '' +
-      '<div class="cart-line" data-id="' + item.id + '">' +
+      '<div class="cart-line" data-id="' + item.id + '" data-shade="' + shadeAttr + '">' +
         '<span class="product-art" style="--tone:' + (Number(item.tone) || 340) + ';"><span class="art-emoji" style="font-size:26px;">' + escapeHtml(item.emoji || '🌸') + '</span></span>' +
         '<div class="cart-line-info">' +
           '<strong>' + escapeHtml(item.name) + '</strong>' +
           (item.shade ? '<span class="cart-line-price">Shade: ' + escapeHtml(item.shade) + '</span><br>' : '') +
           '<span class="cart-line-price">' + money(item.price) + ' each</span><br>' +
           '<span class="qty-stepper">' +
-            '<button type="button" data-cart-minus="' + item.id + '" aria-label="Decrease">−</button>' +
+            '<button type="button" data-cart-minus="' + item.id + '" data-shade="' + shadeAttr + '" aria-label="Decrease">−</button>' +
             '<span class="qty-val">' + item.quantity + '</span>' +
-            '<button type="button" data-cart-plus="' + item.id + '" aria-label="Increase">+</button>' +
+            '<button type="button" data-cart-plus="' + item.id + '" data-shade="' + shadeAttr + '" aria-label="Increase">+</button>' +
           '</span> ' +
-          '<button class="cart-line-remove" type="button" data-cart-remove="' + item.id + '">Remove</button>' +
+          '<button class="cart-line-remove" type="button" data-cart-remove="' + item.id + '" data-shade="' + shadeAttr + '">Remove</button>' +
         '</div>' +
         '<span class="cart-line-total">' + money(item.price * item.quantity) + '</span>' +
       '</div>';
@@ -287,22 +309,24 @@
     var minus = e.target.closest('[data-cart-minus]');
     if (minus) {
       var id1 = Number(minus.getAttribute('data-cart-minus'));
-      var line1 = getCart().find(function (item) { return item.id === id1; });
-      if (line1) setQuantity(id1, line1.quantity - 1);
+      var shade1 = minus.getAttribute('data-shade') || '';
+      var line1 = getCart().find(function (item) { return item.id === id1 && item.shade === shade1; });
+      if (line1) setQuantity(id1, shade1, line1.quantity - 1);
       return;
     }
 
     var plus = e.target.closest('[data-cart-plus]');
     if (plus) {
       var id2 = Number(plus.getAttribute('data-cart-plus'));
-      var line2 = getCart().find(function (item) { return item.id === id2; });
-      if (line2) setQuantity(id2, line2.quantity + 1);
+      var shade2 = plus.getAttribute('data-shade') || '';
+      var line2 = getCart().find(function (item) { return item.id === id2 && item.shade === shade2; });
+      if (line2) setQuantity(id2, shade2, line2.quantity + 1);
       return;
     }
 
     var remove = e.target.closest('[data-cart-remove]');
     if (remove) {
-      removeFromCart(Number(remove.getAttribute('data-cart-remove')));
+      removeFromCart(Number(remove.getAttribute('data-cart-remove')), remove.getAttribute('data-shade') || '');
     }
   });
 

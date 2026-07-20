@@ -79,42 +79,234 @@
             })
             .catch(function (err) { B.toast(err.message, 'error'); });
         });
+      return;
+    }
+
+    /* Reviews — edit comment text or delete the review outright */
+    var reviewEditBtn = e.target.closest('[data-review-edit]');
+    if (reviewEditBtn) {
+      var reviewItem = reviewEditBtn.closest('[data-review]');
+      reviewItem.querySelector('.review-comment-view').style.display = 'none';
+      reviewItem.querySelector('.review-comment-edit').style.display = '';
+      reviewItem.querySelector('[data-review-edit]').style.display = 'none';
+      reviewItem.querySelector('[data-review-save]').style.display = '';
+      reviewItem.querySelector('[data-review-cancel]').style.display = '';
+      reviewItem.querySelector('.review-comment-edit').focus();
+      return;
+    }
+
+    var reviewCancelBtn = e.target.closest('[data-review-cancel]');
+    if (reviewCancelBtn) {
+      var cancelItem = reviewCancelBtn.closest('[data-review]');
+      var viewEl = cancelItem.querySelector('.review-comment-view');
+      var editEl = cancelItem.querySelector('.review-comment-edit');
+      editEl.value = viewEl.textContent;
+      editEl.style.display = 'none';
+      viewEl.style.display = viewEl.textContent ? '' : 'none';
+      cancelItem.querySelector('[data-review-edit]').style.display = '';
+      cancelItem.querySelector('[data-review-save]').style.display = 'none';
+      cancelItem.querySelector('[data-review-cancel]').style.display = 'none';
+      return;
+    }
+
+    var reviewSaveBtn = e.target.closest('[data-review-save]');
+    if (reviewSaveBtn) {
+      var saveItem = reviewSaveBtn.closest('[data-review]');
+      var productId = saveItem.getAttribute('data-product-id');
+      var reviewId = saveItem.getAttribute('data-review-id');
+      var comment = saveItem.querySelector('.review-comment-edit').value.trim();
+
+      B.api('/api/products/' + productId + '/reviews/' + reviewId, {
+        method: 'PATCH',
+        body: { comment: comment }
+      }).then(function () {
+        var viewEl2 = saveItem.querySelector('.review-comment-view');
+        viewEl2.textContent = comment;
+        viewEl2.style.display = comment ? '' : 'none';
+        saveItem.querySelector('.review-comment-edit').style.display = 'none';
+        saveItem.querySelector('[data-review-edit]').style.display = '';
+        saveItem.querySelector('[data-review-save]').style.display = 'none';
+        saveItem.querySelector('[data-review-cancel]').style.display = 'none';
+        B.toast('Review updated ✔');
+      }).catch(function (err) { B.toast(err.message, 'error'); });
+      return;
+    }
+
+    var reviewDeleteBtn = e.target.closest('[data-review-delete]');
+    if (reviewDeleteBtn) {
+      var deleteItem = reviewDeleteBtn.closest('[data-review]');
+      var delProductId = deleteItem.getAttribute('data-product-id');
+      var delReviewId = deleteItem.getAttribute('data-review-id');
+
+      B.confirmDialog('Delete this review?', 'This permanently removes the review from the product page.')
+        .then(function (confirmed) {
+          if (!confirmed) return;
+          B.api('/api/products/' + delProductId + '/reviews/' + delReviewId, { method: 'DELETE' })
+            .then(function () {
+              B.toast('Review deleted.');
+              deleteItem.remove();
+            })
+            .catch(function (err) { B.toast(err.message, 'error'); });
+        });
     }
   });
 
-  /* Add product */
-  var openBtn = B.$('#add-product-open');
-  if (openBtn) {
-    openBtn.addEventListener('click', function () { B.openModal('add-product-modal'); });
-  }
-
+  /* Add / edit product */
   var addForm = B.$('#add-product-form');
   if (addForm) {
+    var status = B.$('#add-product-status');
+    var modalTitle = B.$('#product-modal-title');
+    var submitBtn = B.$('#product-submit-btn');
+    var imagesGrid = B.$('#product-images-grid');
+    var modelImagePreview = B.$('#product-model-image-preview');
+    var imageInput = B.$('#product-image-input');
+    var modelImageInput = B.$('#product-model-image-input');
+
+    var currentImages = [];
+    var currentModelImage = '';
+    var editingProductId = null;
+
+    function setStatus(message, kind) {
+      status.textContent = message || '';
+      status.className = 'form-status' + (kind ? ' is-' + kind : '');
+    }
+
+    function renderImagesGrid() {
+      imagesGrid.innerHTML = currentImages.map(function (url, index) {
+        return '<div class="image-thumb"><img src="' + B.escapeHtml(url) + '">' +
+          '<button type="button" class="image-thumb-remove" data-remove-image="' + index + '" aria-label="Remove photo">✕</button></div>';
+      }).join('');
+    }
+
+    function renderModelImagePreview() {
+      modelImagePreview.innerHTML = currentModelImage
+        ? '<div class="image-thumb"><img src="' + B.escapeHtml(currentModelImage) + '">' +
+          '<button type="button" class="image-thumb-remove" id="remove-model-image" aria-label="Remove photo">✕</button></div>'
+        : '';
+    }
+
+    function uploadFile(file) {
+      var fd = new FormData();
+      fd.append('image', file);
+      return B.api('/api/uploads', { method: 'POST', body: fd }).then(function (result) {
+        return result.url;
+      });
+    }
+
+    imageInput.addEventListener('change', function () {
+      var files = Array.prototype.slice.call(imageInput.files || []);
+      imageInput.value = '';
+      if (!files.length) return;
+      setStatus('Uploading…', 'info');
+      Promise.all(files.map(uploadFile)).then(function (urls) {
+        currentImages = currentImages.concat(urls).slice(0, 8);
+        renderImagesGrid();
+        setStatus('');
+      }).catch(function (err) {
+        setStatus(err.message, 'error');
+      });
+    });
+
+    modelImageInput.addEventListener('change', function () {
+      var file = modelImageInput.files && modelImageInput.files[0];
+      modelImageInput.value = '';
+      if (!file) return;
+      setStatus('Uploading…', 'info');
+      uploadFile(file).then(function (url) {
+        currentModelImage = url;
+        renderModelImagePreview();
+        setStatus('');
+      }).catch(function (err) {
+        setStatus(err.message, 'error');
+      });
+    });
+
+    B.$('#product-image-add').addEventListener('click', function () { imageInput.click(); });
+    B.$('#product-model-image-add').addEventListener('click', function () { modelImageInput.click(); });
+
+    imagesGrid.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-remove-image]');
+      if (!btn) return;
+      currentImages.splice(Number(btn.getAttribute('data-remove-image')), 1);
+      renderImagesGrid();
+    });
+
+    modelImagePreview.addEventListener('click', function (e) {
+      if (e.target.id === 'remove-model-image') {
+        currentModelImage = '';
+        renderModelImagePreview();
+      }
+    });
+
+    function resetForm() {
+      editingProductId = null;
+      currentImages = [];
+      currentModelImage = '';
+      addForm.reset();
+      modalTitle.textContent = 'Add new product';
+      submitBtn.textContent = 'Add product';
+      renderImagesGrid();
+      renderModelImagePreview();
+      setStatus('');
+    }
+
+    var openBtn = B.$('#add-product-open');
+    if (openBtn) {
+      openBtn.addEventListener('click', function () {
+        resetForm();
+        B.openModal('add-product-modal');
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      var editBtn = e.target.closest('[data-edit-product]');
+      if (!editBtn) return;
+      var product = JSON.parse(editBtn.getAttribute('data-edit-product'));
+
+      editingProductId = product.id;
+      currentImages = (product.images || []).slice();
+      currentModelImage = product.modelImage || '';
+      addForm.elements.name.value = product.name || '';
+      addForm.elements.brand.value = product.brand || '';
+      addForm.elements.price.value = product.price || 0;
+      addForm.elements.stock.value = product.stock || 0;
+      addForm.elements.category.value = product.category || 'makeup';
+      addForm.elements.badge.value = product.badge || '';
+      addForm.elements.emoji.value = product.emoji || '';
+      addForm.elements.description.value = product.description || '';
+      modalTitle.textContent = 'Edit ' + product.name;
+      submitBtn.textContent = 'Save changes';
+      renderImagesGrid();
+      renderModelImagePreview();
+      setStatus('');
+      B.openModal('add-product-modal');
+    });
+
     addForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var f = addForm;
-      var status = B.$('#add-product-status');
-      var image = f.elements.image.value.trim();
+      var payload = {
+        name: f.elements.name.value.trim(),
+        brand: f.elements.brand.value.trim(),
+        price: Number(f.elements.price.value) || 0,
+        stock: Number(f.elements.stock.value) || 0,
+        category: f.elements.category.value,
+        badge: f.elements.badge.value.trim(),
+        emoji: f.elements.emoji.value.trim() || '🌸',
+        description: f.elements.description.value.trim(),
+        images: currentImages,
+        modelImage: currentModelImage
+      };
 
-      B.api('/api/products', {
-        method: 'POST',
-        body: {
-          name: f.elements.name.value.trim(),
-          brand: f.elements.brand.value.trim(),
-          price: Number(f.elements.price.value) || 0,
-          stock: Number(f.elements.stock.value) || 0,
-          category: f.elements.category.value,
-          badge: f.elements.badge.value.trim(),
-          emoji: f.elements.emoji.value.trim() || '🌸',
-          description: f.elements.description.value.trim(),
-          images: image ? [image] : []
-        }
-      }).then(function () {
-        B.toast('Product added 🎀');
+      var isEdit = editingProductId !== null;
+      var url = isEdit ? '/api/products/' + editingProductId : '/api/products';
+      var method = isEdit ? 'PATCH' : 'POST';
+
+      B.api(url, { method: method, body: payload }).then(function () {
+        B.toast(isEdit ? 'Product updated 🎀' : 'Product added 🎀');
         setTimeout(function () { window.location.reload(); }, 700);
       }).catch(function (err) {
-        status.textContent = err.message;
-        status.className = 'form-status is-error';
+        setStatus(err.message, 'error');
       });
     });
   }

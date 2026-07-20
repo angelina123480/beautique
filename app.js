@@ -25,7 +25,15 @@ if (fs.existsSync(dotenvPath)) {
 const store = require('./lib/store');
 const auth = require('./lib/auth');
 
-store.init();
+/* store.init() is async (it may hit Redis) and only needs to run once per
+   process — cache the promise so every request just awaits the same one. */
+let initPromise = null;
+function ensureInit() {
+  if (!initPromise) {
+    initPromise = store.init();
+  }
+  return initPromise;
+}
 
 const app = express();
 
@@ -33,6 +41,18 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 /* Template helpers available in every view. */
+const publicDir = path.join(__dirname, 'public');
+/* Cache-busting query string for a static asset, based on its last-modified
+   time — so editing style.css/product.js immediately invalidates the
+   browser's cached copy instead of silently serving the old file for up to
+   an hour (see the maxAge on the static middleware below). */
+app.locals.assetVersion = (relPath) => {
+  try {
+    return Math.floor(fs.statSync(path.join(publicDir, relPath)).mtimeMs);
+  } catch (err) {
+    return Date.now();
+  }
+};
 app.locals.money = (value) => '$' + (Number(value) || 0).toFixed(2);
 app.locals.dateLabel = (value) => new Date(value).toLocaleDateString('en-US', {
   year: 'numeric', month: 'short', day: 'numeric'
@@ -52,9 +72,18 @@ app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'SAMEORIGIN');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  /* Every page/API response here reflects live account state (who's signed
+     in, their cart, orders...) — never let the browser cache or restore one
+     from bfcache after sign-out, or the back button can show a stale
+     "still signed in" page without ever asking the server again. Static
+     assets are unaffected: express.static above already handled those. */
+  res.set('Cache-Control', 'no-store');
   next();
 });
 
+app.use((req, res, next) => {
+  ensureInit().then(() => next()).catch(next);
+});
 app.use(auth.attachUser);
 
 app.use('/api', require('./routes/api'));

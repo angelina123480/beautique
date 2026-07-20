@@ -27,6 +27,7 @@
     B.$('#field-invite').style.display = isSignup && B.$('#auth-role').value === 'admin' ? '' : 'none';
     B.$('#auth-submit').textContent = isSignup ? 'Create account' : 'Sign in';
     B.$('#auth-password').setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
+    B.$('#auth-forgot-link').style.display = isSignup ? 'none' : '';
     setStatus('');
   }
 
@@ -61,6 +62,122 @@
     pendingEmail = '';
     setStatus('');
   }
+
+  /* Forgot password */
+  var forgotStep = B.$('#forgot-step');
+  var forgotEmailField = B.$('#forgot-email-field');
+  var forgotEmailInput = B.$('#forgot-email');
+  var forgotSendBtn = B.$('#forgot-send');
+  var forgotResetFields = B.$('#forgot-reset-fields');
+  var forgotIntro = B.$('#forgot-intro');
+  var forgotPasswordInput = B.$('#forgot-password');
+  var forgotSubmitBtn = B.$('#forgot-submit');
+  var resetOtpBoxes = B.$$('#reset-otp-inputs input');
+  var forgotEmail = '';
+
+  function showForgotStep() {
+    B.$('#auth-step').style.display = 'none';
+    B.$('#otp-step').style.display = 'none';
+    forgotStep.style.display = '';
+    forgotEmailInput.value = B.$('#auth-email').value.trim();
+    forgotEmailField.style.display = '';
+    forgotSendBtn.style.display = '';
+    forgotResetFields.style.display = 'none';
+    forgotIntro.textContent = "Enter your email and we'll send you a reset code.";
+    setStatus('');
+  }
+
+  function hideForgotStep() {
+    forgotStep.style.display = 'none';
+    B.$('#auth-step').style.display = '';
+    forgotEmail = '';
+    setStatus('');
+  }
+
+  B.$('#auth-forgot-link').addEventListener('click', function (e) {
+    e.preventDefault();
+    showForgotStep();
+  });
+
+  B.$('#forgot-back').addEventListener('click', function (e) {
+    e.preventDefault();
+    hideForgotStep();
+  });
+
+  forgotSendBtn.addEventListener('click', function () {
+    var email = forgotEmailInput.value.trim();
+    if (!email) {
+      setStatus('Please enter your email address.', 'error');
+      return;
+    }
+    setStatus('Sending…', 'info');
+    B.api('/api/auth/forgot-password', { method: 'POST', body: { email: email } })
+      .then(function (response) {
+        forgotEmail = email;
+        forgotIntro.textContent = 'Enter the 6-digit code we sent to ' + email + ', then choose a new password.';
+        forgotEmailField.style.display = 'none';
+        forgotSendBtn.style.display = 'none';
+        forgotResetFields.style.display = '';
+        var devNote = B.$('#forgot-dev-otp-note');
+        if (response.devOtp) {
+          devNote.textContent = '🛠️ Dev mode — your reset code is: ' + response.devOtp;
+          devNote.style.display = '';
+        } else {
+          devNote.style.display = 'none';
+        }
+        resetOtpBoxes.forEach(function (box) { box.value = ''; });
+        resetOtpBoxes[0].focus();
+        setStatus(response.message || '', response.message ? 'success' : '');
+      })
+      .catch(function (err) { setStatus(err.message, 'error'); });
+  });
+
+  /* Segmented reset-code input behavior (mirrors the sign-up/sign-in OTP boxes) */
+  resetOtpBoxes.forEach(function (box, index) {
+    box.addEventListener('input', function () {
+      box.value = box.value.replace(/\D/g, '').slice(-1);
+      if (box.value && index < resetOtpBoxes.length - 1) resetOtpBoxes[index + 1].focus();
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !box.value && index > 0) resetOtpBoxes[index - 1].focus();
+      if (e.key === 'Enter') { e.preventDefault(); forgotSubmitBtn.click(); }
+    });
+    box.addEventListener('paste', function (e) {
+      var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      if (text.length >= 2) {
+        e.preventDefault();
+        text.split('').slice(0, 6).forEach(function (char, i) { if (resetOtpBoxes[i]) resetOtpBoxes[i].value = char; });
+        resetOtpBoxes[Math.min(text.length, 6) - 1].focus();
+      }
+    });
+  });
+
+  forgotSubmitBtn.addEventListener('click', function () {
+    var code = resetOtpBoxes.map(function (box) { return box.value; }).join('');
+    var password = forgotPasswordInput.value;
+    if (code.length < 6) {
+      setStatus('Please enter the 6-digit code.', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      setStatus('Password must be at least 6 characters.', 'error');
+      return;
+    }
+    setStatus('Updating…', 'info');
+    B.api('/api/auth/reset-password', { method: 'POST', body: { email: forgotEmail, otp: code, password: password } })
+      .then(function () {
+        setStatus('Password updated! You can sign in now.', 'success');
+        var resetEmail = forgotEmail;
+        setTimeout(function () {
+          hideForgotStep();
+          setMode('signin');
+          B.$('#auth-email').value = resetEmail;
+          B.$('#auth-password').value = '';
+          B.$('#auth-password').focus();
+        }, 1200);
+      })
+      .catch(function (err) { setStatus(err.message, 'error'); });
+  });
 
   /* Segmented OTP input behavior */
   otpBoxes.forEach(function (box, index) {

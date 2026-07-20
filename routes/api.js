@@ -1,17 +1,51 @@
 'use strict';
 
 const express = require('express');
+const multer = require('multer');
 const store = require('../lib/store');
 const auth = require('../lib/auth');
 const catalog = require('../lib/catalog');
 const emailService = require('../lib/emailService');
+const uploads = require('../lib/uploads');
 
 const router = express.Router();
+
+/* Images only, kept under Vercel's 4.5MB function request-body limit. */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) {
+      return cb(null, true);
+    }
+    const err = new Error('Only JPG, PNG, WEBP, or GIF images are allowed.');
+    err.status = 400;
+    cb(err);
+  }
+});
+
+/* Normalizes multer's own errors (e.g. file-too-large) into the same
+   { status, message } shape the rest of the app's error handler expects. */
+function uploadSingleImage(req, res, next) {
+  upload.single('image')(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      err.message = 'Image is too large (max 4MB).';
+    }
+    err.status = err.status || 400;
+    next(err);
+  });
+}
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_FLAT = 5.95;
 const ORDER_STATUSES = ['confirmed', 'shipped', 'delivered', 'cancelled'];
+
+/* Express 4 doesn't forward rejected promises to the error handler on its own. */
+function ah(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
 
 function adminInviteCode() {
   return process.env.ADMIN_INVITE_CODE || 'BEAUTIQUE-ADMIN';
@@ -34,12 +68,22 @@ function generateOtp() {
  * provider is configured (local demo), the code is returned so the UI can
  * display it instead of leaving the user stranded.
  */
-function issueOtp(users, user) {
+async function issueOtp(users, user) {
   const otp = generateOtp();
   user.otp = otp;
   user.otpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
-  store.write('users', users);
+  await store.write('users', users);
   emailService.sendEmail('otp', user.email, { firstName: user.name, otp }).catch(() => {});
+  return emailService.isConfigured() ? undefined : otp;
+}
+
+/** Same idea as issueOtp, but for the separate "forgot password" reset code. */
+async function issueResetOtp(users, user) {
+  const otp = generateOtp();
+  user.resetOtp = otp;
+  user.resetOtpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
+  await store.write('users', users);
+  emailService.sendEmail('password_reset', user.email, { firstName: user.name, otp }).catch(() => {});
   return emailService.isConfigured() ? undefined : otp;
 }
 
@@ -51,7 +95,7 @@ router.get('/auth/me', (req, res) => {
   res.json({ ok: true, user: auth.safeUser(req.user) });
 });
 
-router.post('/auth/signup', (req, res) => {
+router.post('/auth/signup', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
   const password = String(payload.password || '');
@@ -69,7 +113,7 @@ router.post('/auth/signup', (req, res) => {
     return res.status(403).json({ ok: false, message: 'Invalid admin invite code.' });
   }
 
-  const users = store.read('users');
+  const users = await store.read('users');
   const existing = users.find((user) => normalizeEmail(user.email) === email);
 
   if (existing && existing.otpVerified) {
@@ -98,14 +142,14 @@ router.post('/auth/signup', (req, res) => {
     users.push(account);
   }
 
-  const devOtp = issueOtp(users, account);
+  const devOtp = await issueOtp(users, account);
   res.json({ ok: true, requiresOtp: true, email: account.email, devOtp });
-});
+}));
 
-router.post('/auth/signin', (req, res) => {
+router.post('/auth/signin', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
-  const users = store.read('users');
+  const users = await store.read('users');
   const user = users.find((entry) => normalizeEmail(entry.email) === email);
 
   if (!user || !store.verifyPassword(String(payload.password || ''), user.password)) {
@@ -113,18 +157,18 @@ router.post('/auth/signin', (req, res) => {
   }
 
   if (!user.otpVerified) {
-    const devOtp = issueOtp(users, user);
+    const devOtp = await issueOtp(users, user);
     return res.json({ ok: true, requiresOtp: true, email: user.email, devOtp });
   }
 
-  auth.createSession(res, user.id);
+  await auth.createSession(res, user.id);
   res.json({ ok: true, user: auth.safeUser(user) });
-});
+}));
 
-router.post('/auth/verify-otp', (req, res) => {
+router.post('/auth/verify-otp', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
-  const users = store.read('users');
+  const users = await store.read('users');
   const user = users.find((entry) => normalizeEmail(entry.email) === email);
 
   if (!user) {
@@ -140,15 +184,15 @@ router.post('/auth/verify-otp', (req, res) => {
   user.otpVerified = true;
   user.otp = '';
   user.otpExpires = '';
-  store.write('users', users);
+  await store.write('users', users);
 
-  auth.createSession(res, user.id);
+  await auth.createSession(res, user.id);
   res.json({ ok: true, user: auth.safeUser(user) });
-});
+}));
 
-router.post('/auth/resend-otp', (req, res) => {
+router.post('/auth/resend-otp', ah(async (req, res) => {
   const email = normalizeEmail((req.body || {}).email);
-  const users = store.read('users');
+  const users = await store.read('users');
   const user = users.find((entry) => normalizeEmail(entry.email) === email);
 
   if (!user || user.otpVerified) {
@@ -156,22 +200,63 @@ router.post('/auth/resend-otp', (req, res) => {
     return res.json({ ok: true, message: 'If a verification is pending, a new code has been sent.' });
   }
 
-  const devOtp = issueOtp(users, user);
+  const devOtp = await issueOtp(users, user);
   res.json({ ok: true, message: 'A new code is on its way.', devOtp });
-});
+}));
 
-router.post('/auth/signout', (req, res) => {
-  auth.destroySession(req, res);
+router.post('/auth/forgot-password', ah(async (req, res) => {
+  const email = normalizeEmail((req.body || {}).email);
+  const users = await store.read('users');
+  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+
+  if (!user) {
+    // Do not reveal whether the account exists.
+    return res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.' });
+  }
+
+  const devOtp = await issueResetOtp(users, user);
+  res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.', devOtp });
+}));
+
+router.post('/auth/reset-password', ah(async (req, res) => {
+  const payload = req.body || {};
+  const email = normalizeEmail(payload.email);
+  const password = String(payload.password || '');
+
+  if (password.length < 6) {
+    return res.status(400).json({ ok: false, message: 'Password must be at least 6 characters.' });
+  }
+
+  const users = await store.read('users');
+  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+
+  if (!user || !user.resetOtp || String(user.resetOtp) !== String(payload.otp || '').trim()) {
+    return res.status(401).json({ ok: false, message: 'That code is not valid. Please try again.' });
+  }
+  if (user.resetOtpExpires && new Date(user.resetOtpExpires).getTime() < Date.now()) {
+    return res.status(401).json({ ok: false, message: 'That code has expired. Request a new one.' });
+  }
+
+  user.password = store.hashPassword(password);
+  user.resetOtp = '';
+  user.resetOtpExpires = '';
+  await store.write('users', users);
+
+  res.json({ ok: true, message: 'Password updated. Please sign in.' });
+}));
+
+router.post('/auth/signout', ah(async (req, res) => {
+  await auth.destroySession(req, res);
   res.json({ ok: true });
-});
+}));
 
 /* ------------------------------------------------------------------ *
  * Profile
  * ------------------------------------------------------------------ */
 
-router.post('/profile/update', auth.requireUser, (req, res) => {
+router.post('/profile/update', auth.requireUser, ah(async (req, res) => {
   const payload = req.body || {};
-  const users = store.read('users');
+  const users = await store.read('users');
   const current = users.find((entry) => entry.id === req.user.id);
 
   if (!current) {
@@ -200,17 +285,43 @@ router.post('/profile/update', auth.requireUser, (req, res) => {
     current.address = String(payload.address).trim();
   }
 
-  store.write('users', users);
+  await store.write('users', users);
   res.json({ ok: true, user: auth.safeUser(current) });
-});
+}));
+
+router.post('/profile/delete', auth.requireUser, ah(async (req, res) => {
+  const password = String((req.body || {}).password || '');
+  const users = await store.read('users');
+  const current = users.find((entry) => entry.id === req.user.id);
+
+  if (!current || !store.verifyPassword(password, current.password)) {
+    return res.status(401).json({ ok: false, message: 'Incorrect password.' });
+  }
+
+  if (current.role === 'admin' && users.filter((entry) => entry.role === 'admin').length <= 1) {
+    return res.status(400).json({ ok: false, message: 'You are the only admin account — promote another admin before deleting this one.' });
+  }
+
+  await store.write('users', users.filter((entry) => entry.id !== current.id));
+  await auth.destroySession(req, res);
+  res.json({ ok: true });
+}));
 
 /* ------------------------------------------------------------------ *
  * Products
  * ------------------------------------------------------------------ */
 
-router.get('/products', (req, res) => {
-  res.json({ ok: true, products: catalog.getProducts() });
-});
+router.get('/products', ah(async (req, res) => {
+  res.json({ ok: true, products: await catalog.getProducts() });
+}));
+
+router.post('/uploads', auth.requireAdmin, uploadSingleImage, ah(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No image file provided.' });
+  }
+  const url = await uploads.saveUpload(req.file.buffer, req.file.originalname, req.file.mimetype);
+  res.json({ ok: true, url });
+}));
 
 function applyProductFields(product, payload) {
   if (payload.name !== undefined) product.name = String(payload.name).trim();
@@ -225,7 +336,7 @@ function applyProductFields(product, payload) {
   if (payload.stock !== undefined) product.stock = Math.max(0, Math.floor(Number(payload.stock) || 0));
   if (payload.soldOut !== undefined) product.soldOut = payload.soldOut === true;
   if (payload.images !== undefined && Array.isArray(payload.images)) {
-    product.images = payload.images.map(String).filter(Boolean).slice(0, 4);
+    product.images = payload.images.map(String).filter(Boolean).slice(0, 8);
   }
   if (payload.shades !== undefined) {
     if (Array.isArray(payload.shades)) {
@@ -239,13 +350,13 @@ function applyProductFields(product, payload) {
   if (product.soldOut) product.stock = 0;
 }
 
-router.post('/products', auth.requireAdmin, (req, res) => {
+router.post('/products', auth.requireAdmin, ah(async (req, res) => {
   const payload = req.body || {};
   if (!payload.name || !payload.brand || payload.price === undefined || !payload.description) {
     return res.status(400).json({ ok: false, message: 'Name, brand, price, and description are required.' });
   }
 
-  const products = store.read('products');
+  const products = await store.read('products');
   const product = {
     id: store.nextId(products),
     name: '',
@@ -265,40 +376,40 @@ router.post('/products', auth.requireAdmin, (req, res) => {
   applyProductFields(product, payload);
 
   products.push(product);
-  store.write('products', products);
+  await store.write('products', products);
   res.json({ ok: true, product: catalog.decorate(product) });
-});
+}));
 
-router.patch('/products/:id', auth.requireAdmin, (req, res) => {
-  const products = store.read('products');
+router.patch('/products/:id', auth.requireAdmin, ah(async (req, res) => {
+  const products = await store.read('products');
   const product = products.find((item) => item.id === Number(req.params.id));
   if (!product) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
   applyProductFields(product, req.body || {});
-  store.write('products', products);
+  await store.write('products', products);
   res.json({ ok: true, product: catalog.decorate(product) });
-});
+}));
 
-router.delete('/products/:id', auth.requireAdmin, (req, res) => {
-  const products = store.read('products');
+router.delete('/products/:id', auth.requireAdmin, ah(async (req, res) => {
+  const products = await store.read('products');
   const index = products.findIndex((item) => item.id === Number(req.params.id));
   if (index === -1) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
   const removed = products.splice(index, 1)[0];
-  store.write('products', products);
+  await store.write('products', products);
   res.json({ ok: true, product: removed });
-});
+}));
 
 /* ------------------------------------------------------------------ *
  * Reviews
  * ------------------------------------------------------------------ */
 
-router.post('/products/:id/reviews', auth.requireUser, (req, res) => {
-  const products = store.read('products');
+router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
+  const products = await store.read('products');
   const product = products.find((item) => item.id === Number(req.params.id));
   if (!product) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
@@ -308,35 +419,27 @@ router.post('/products/:id/reviews', auth.requireUser, (req, res) => {
   const rating = Math.min(5, Math.max(1, Math.round(Number(payload.rating) || 5)));
   const comment = String(payload.comment || '').trim().slice(0, 1000);
 
-  const orders = store.read('orders');
+  const orders = await store.read('orders');
   const verifiedPurchase = orders.some((order) =>
     order.userId === req.user.id &&
     order.status !== 'cancelled' &&
     (order.items || []).some((item) => item.productId === product.id));
 
   product.reviews = product.reviews || [];
-  let review = product.reviews.find((entry) => entry.userId === req.user.id);
-  if (review) {
-    review.rating = rating;
-    review.comment = comment;
-    review.verified = verifiedPurchase;
-    review.updatedAt = new Date().toISOString();
-  } else {
-    review = {
-      id: Date.now(),
-      userId: req.user.id,
-      userName: req.user.name || 'Customer',
-      rating,
-      comment,
-      verified: verifiedPurchase,
-      createdAt: new Date().toISOString()
-    };
-    product.reviews.push(review);
-  }
+  const review = {
+    id: Date.now(),
+    userId: req.user.id,
+    userName: req.user.name || 'Customer',
+    rating,
+    comment,
+    verified: verifiedPurchase,
+    createdAt: new Date().toISOString()
+  };
+  product.reviews.push(review);
 
-  store.write('products', products);
+  await store.write('products', products);
 
-  const admin = store.read('users').find((account) => account.role === 'admin');
+  const admin = (await store.read('users')).find((account) => account.role === 'admin');
   if (admin && admin.email) {
     emailService.sendEmail('review_notification', admin.email, {
       firstName: admin.name,
@@ -348,11 +451,11 @@ router.post('/products/:id/reviews', auth.requireUser, (req, res) => {
   }
 
   res.json({ ok: true, review, product: catalog.decorate(product) });
-});
+}));
 
-router.get('/reviews', auth.requireAdmin, (req, res) => {
+router.get('/reviews', auth.requireAdmin, ah(async (req, res) => {
   const reviews = [];
-  store.read('products').forEach((product) => {
+  (await store.read('products')).forEach((product) => {
     (product.reviews || []).forEach((review) => {
       reviews.push({
         productId: product.id,
@@ -367,29 +470,78 @@ router.get('/reviews', auth.requireAdmin, (req, res) => {
   });
   reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   res.json({ ok: true, reviews });
-});
+}));
+
+router.patch('/products/:productId/reviews/:reviewId', auth.requireUser, ah(async (req, res) => {
+  const products = await store.read('products');
+  const product = products.find((item) => item.id === Number(req.params.productId));
+  if (!product) {
+    return res.status(404).json({ ok: false, message: 'Product not found.' });
+  }
+
+  const review = (product.reviews || []).find((entry) => entry.id === Number(req.params.reviewId));
+  if (!review) {
+    return res.status(404).json({ ok: false, message: 'Review not found.' });
+  }
+  if (req.user.role !== 'admin' && review.userId !== req.user.id) {
+    return res.status(403).json({ ok: false, message: 'You can only edit your own review.' });
+  }
+
+  const payload = req.body || {};
+  if (payload.comment !== undefined) {
+    review.comment = String(payload.comment).trim().slice(0, 1000);
+  }
+  if (payload.rating !== undefined) {
+    review.rating = Math.min(5, Math.max(1, Math.round(Number(payload.rating) || review.rating)));
+  }
+  review.moderatedAt = new Date().toISOString();
+
+  await store.write('products', products);
+  res.json({ ok: true, review });
+}));
+
+router.delete('/products/:productId/reviews/:reviewId', auth.requireUser, ah(async (req, res) => {
+  const products = await store.read('products');
+  const product = products.find((item) => item.id === Number(req.params.productId));
+  if (!product) {
+    return res.status(404).json({ ok: false, message: 'Product not found.' });
+  }
+
+  const index = (product.reviews || []).findIndex((entry) => entry.id === Number(req.params.reviewId));
+  if (index === -1) {
+    return res.status(404).json({ ok: false, message: 'Review not found.' });
+  }
+  const review = product.reviews[index];
+  if (req.user.role !== 'admin' && review.userId !== req.user.id) {
+    return res.status(403).json({ ok: false, message: 'You can only delete your own review.' });
+  }
+
+  product.reviews.splice(index, 1);
+  await store.write('products', products);
+  res.json({ ok: true });
+}));
 
 /* ------------------------------------------------------------------ *
  * Orders
  * ------------------------------------------------------------------ */
 
-router.get('/orders', auth.requireUser, (req, res) => {
-  let orders = store.read('orders');
+router.get('/orders', auth.requireUser, ah(async (req, res) => {
+  let orders = await store.read('orders');
   if (req.user.role !== 'admin') {
     orders = orders.filter((order) => order.userId === req.user.id);
   }
   orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   res.json({ ok: true, orders });
-});
+}));
 
-router.post('/orders', auth.requireUser, (req, res) => {
+router.post('/orders', auth.requireUser, ah(async (req, res) => {
   const payload = req.body || {};
   const items = Array.isArray(payload.items) ? payload.items : [];
   if (!items.length) {
     return res.status(400).json({ ok: false, message: 'Your bag is empty.' });
   }
 
-  const products = store.read('products');
+  const products = await store.read('products');
   const orderItems = [];
   let subtotal = 0;
 
@@ -435,10 +587,10 @@ router.post('/orders', auth.requireUser, (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  store.write('products', products);
-  const orders = store.read('orders');
+  await store.write('products', products);
+  const orders = await store.read('orders');
   orders.push(order);
-  store.write('orders', orders);
+  await store.write('orders', orders);
 
   const itemsSummary = orderItems
     .map((item) => '  • ' + item.quantity + ' × ' + item.name + (item.shade ? ' (' + item.shade + ')' : '') + ' ($' + item.price.toFixed(2) + ')')
@@ -452,10 +604,10 @@ router.post('/orders', auth.requireUser, (req, res) => {
   emailService.sendEmail('follow_up', req.user.email, { firstName: req.user.name }).catch(console.error);
 
   res.json({ ok: true, order });
-});
+}));
 
-router.post('/orders/:orderId/cancel', auth.requireUser, (req, res) => {
-  const orders = store.read('orders');
+router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => {
+  const orders = await store.read('orders');
   const order = orders.find((entry) => entry.id === Number(req.params.orderId));
 
   if (!order) {
@@ -474,7 +626,7 @@ router.post('/orders/:orderId/cancel', auth.requireUser, (req, res) => {
   order.status = 'cancelled';
   order.cancelledAt = new Date().toISOString();
 
-  const products = store.read('products');
+  const products = await store.read('products');
   (order.items || []).forEach((item) => {
     const product = products.find((entry) => entry.id === item.productId || entry.name === item.name);
     if (product) {
@@ -483,8 +635,8 @@ router.post('/orders/:orderId/cancel', auth.requireUser, (req, res) => {
     }
   });
 
-  store.write('products', products);
-  store.write('orders', orders);
+  await store.write('products', products);
+  await store.write('orders', orders);
 
   if (order.userEmail) {
     emailService.sendEmail('order_cancellation', order.userEmail, {
@@ -495,15 +647,15 @@ router.post('/orders/:orderId/cancel', auth.requireUser, (req, res) => {
   }
 
   res.json({ ok: true, order });
-});
+}));
 
-router.post('/orders/:orderId/status', auth.requireAdmin, (req, res) => {
+router.post('/orders/:orderId/status', auth.requireAdmin, ah(async (req, res) => {
   const status = String((req.body || {}).status || '');
   if (!ORDER_STATUSES.includes(status) || status === 'cancelled') {
     return res.status(400).json({ ok: false, message: 'Invalid order status.' });
   }
 
-  const orders = store.read('orders');
+  const orders = await store.read('orders');
   const order = orders.find((entry) => entry.id === Number(req.params.orderId));
   if (!order) {
     return res.status(404).json({ ok: false, message: 'Order not found.' });
@@ -514,10 +666,10 @@ router.post('/orders/:orderId/status', auth.requireAdmin, (req, res) => {
 
   order.status = status;
   order.updatedAt = new Date().toISOString();
-  store.write('orders', orders);
+  await store.write('orders', orders);
 
   if (order.userEmail && status !== 'confirmed') {
-    const customer = store.read('users').find((entry) => entry.id === order.userId);
+    const customer = (await store.read('users')).find((entry) => entry.id === order.userId);
     emailService.sendEmail('order_status', order.userEmail, {
       firstName: customer ? customer.name : 'there',
       orderNumber: order.id,
@@ -526,13 +678,13 @@ router.post('/orders/:orderId/status', auth.requireAdmin, (req, res) => {
   }
 
   res.json({ ok: true, order });
-});
+}));
 
 /* ------------------------------------------------------------------ *
  * Contact
  * ------------------------------------------------------------------ */
 
-router.post('/contact', (req, res) => {
+router.post('/contact', ah(async (req, res) => {
   const payload = req.body || {};
   const name = String(payload.name || '').trim();
   const email = normalizeEmail(payload.email);
@@ -542,7 +694,7 @@ router.post('/contact', (req, res) => {
     return res.status(400).json({ ok: false, message: 'Please fill in your name, a valid email, and a message.' });
   }
 
-  const messages = store.read('messages');
+  const messages = await store.read('messages');
   messages.push({
     id: Date.now(),
     name,
@@ -550,9 +702,9 @@ router.post('/contact', (req, res) => {
     message: message.slice(0, 2000),
     createdAt: new Date().toISOString()
   });
-  store.write('messages', messages);
+  await store.write('messages', messages);
 
-  const admin = store.read('users').find((account) => account.role === 'admin');
+  const admin = (await store.read('users')).find((account) => account.role === 'admin');
   if (admin && admin.email) {
     emailService.sendEmail('contact_message', admin.email, {
       firstName: admin.name,
@@ -563,6 +715,6 @@ router.post('/contact', (req, res) => {
   }
 
   res.json({ ok: true, message: 'Thank you! We will get back to you shortly.' });
-});
+}));
 
 module.exports = router;

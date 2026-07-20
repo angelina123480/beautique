@@ -3,34 +3,14 @@
     "id": 1,
     "name": "Admin User",
     "email": "admin@luna.com",
-    "password": "scrypt:87ecce0eb945693144fe6e00697885be:e2c05d84b8b3b6bdbd2e556a2f8531a6027d486fff12d4cdb351f26096b94a42065a1526e0e1940fb23ec1d4dcce43f1e0a746a548f2a1cdfe25eeebe91ebb14",
+    "password": "scrypt:d8401d68a1a3bc3d0c24ade4f7800eb5:a1f39dd3885f01fef66c3129c6db13f00ea22bcf674c8b663f6aee3e0f3e93db4e747bd2536885f7f73f3e8bf0c5ee3d9b2143e9af9129fb03f8b4661f480a6f",
     "role": "admin",
     "otp": "",
     "otpVerified": true,
     "phone": "",
-    "address": ""
-  },
-  {
-    "id": 1784116945954,
-    "name": "Angelina Abi Nader",
-    "email": "angelina.abinader@gmail.com",
-    "password": "scrypt:c6428894209b3b8f57cb246dce1dcf7f:d6660a61e7f180b9d96058892918aa478eed02c81224f7ee5baec76c78c344dfbf0ae8b51d998a0209bc7e74c3a366ac36fd2e42caaf33d5060b7d18630fafbd",
-    "role": "client",
-    "phone": "",
     "address": "",
-    "otp": "",
-    "otpVerified": true
-  },
-  {
-    "id": 1784184443193,
-    "name": "ang",
-    "email": "angelina.abinader@net.usj.edu.lb",
-    "password": "scrypt:d5d12aa5dbf15dd9c9fb27b80b7c1747:128b5f6c8d9dfb221d7dbb7e1243f1f77b79421d54d57e4608c6a2fba918ebdf44a460613a2bc42fcfe1692e22b0d98b5924113367b59a85626036693b433aa5",
-    "role": "client",
-    "phone": "",
-    "address": "",
-    "otp": "",
-    "otpVerified": false
+    "resetOtp": "",
+    "resetOtpExpires": ""
   },
   {
     "id": 1784203304015,
@@ -44,5 +24,57 @@
     "otpVerified": false,
     "createdAt": "2026-07-16T12:01:44.137Z",
     "otpExpires": "2026-07-16T12:11:44.137Z"
+  },
+  {
+    "id": 1784275734922,
+    "name": "jane",
+    "email": "luna@gmail.com",
+    "password": "scrypt:ec9c1df6ea48313e6aeacd08c8438bed:09f76e391e72b59ce2bfe2dc6d454d462dc784c61ccdc48f4475db449bf40e4731a5afdc6bf68e249c2c243d734c51f5b26090c3510a07f8b6d438c3e5543d31",
+    "role": "client",
+    "phone": "",
+    "address": "",
+    "otp": "328806",
+    "otpVerified": false,
+    "createdAt": "2026-07-17T08:08:54.972Z",
+    "otpExpires": "2026-07-17T08:18:54.972Z"
+  },
+  {
+    "id": 1784276593866,
+    "name": "tino",
+    "email": "moukarzelanthony2@gmail.com",
+    "password": "scrypt:b3d494ed55b19635e83bcae8aca40ad6:44ce386656707b4e3fefce4b3da653bc423582264bcb819b086c9bb09ed071ce6db80e8d9963f262d69f4cab290b7517d1578f2f847c6b86c2a5e89fd22746cc",
+    "role": "client",
+    "phone": "",
+    "address": "",
+    "otp": "249532",
+    "otpVerified": false,
+    "createdAt": "2026-07-17T08:23:13.900Z",
+    "otpExpires": "2026-07-17T08:37:04.431Z"
+  },
+  {
+    "id": 1784278127757,
+    "name": "ang",
+    "email": "angelina.abinader@net.usj.edu.lb",
+    "password": "scrypt:81f15771e1e697b8f8605f3ac04025f5:1535b8c926a1ef3301fbfe7165153baa82c2941e542a9bde6b1bd2d70c35f0fd10ab0fc058b722308e8d41a0f2fa2dcc729b76c5f2ee9335dc8a958bcca46a39",
+    "role": "client",
+    "phone": "",
+    "address": "",
+    "otp": "129126",
+    "otpVerified": false,
+    "createdAt": "2026-07-17T08:48:47.799Z",
+    "otpExpires": "2026-07-17T08:58:47.799Z"
+  },
+  {
+    "id": 1784278421545,
+    "name": "Angelina Abi Nader",
+    "email": "angelina.abinader@gmail.com",
+    "password": "scrypt:ee7fd62f0b248d139f590f7f0f828718:248eda0264b328fe5b0d33bdee22c5f212dbf2585910ae9966e6b77fec194c88152f4bc8db1eb5a33e28706a1d5788ccf45533f2cbb5e4f6026329ec14ff1b54",
+    "role": "client",
+    "phone": "",
+    "address": "",
+    "otp": "",
+    "otpVerified": true,
+    "createdAt": "2026-07-17T08:53:41.585Z",
+    "otpExpires": ""
   }
 ]

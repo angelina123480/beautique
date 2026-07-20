@@ -7,26 +7,46 @@
     "badge": "Bestseller",
     "emoji": "💄",
     "description": "A soft matte finish with lasting comfort.",
-    "stock": 10,
+    "stock": 9,
     "soldOut": false,
-    "images": [],
-    "modelImage": "",
-    "reviews": [
-      {
-        "id": 1784189122495,
-        "userId": 1,
-        "userName": "Admin User",
-        "rating": 5,
-        "comment": "i love this product!!!!",
-        "createdAt": "2026-07-16T08:05:22.495Z"
-      }
+    "images": [
+      "/img/products/velvet-satin-liprosenude.jpg",
+      "/img/products/velvet-satin-lip2.webp"
     ],
+    "modelImage": "",
+    "reviews": [],
     "category": "makeup",
     "tone": 340,
     "shades": [
-      "Rose Nude",
-      "Berry",
-      "Cocoa"
+      {
+        "name": "Rose Nude",
+        "label": "Rose Nude",
+        "color": "#c98374",
+        "images": [
+          "/img/products/velvet-satin-liprosenude.jpg",
+          "/img/products/velvet-satin-lip2.webp"
+        ]
+      },
+      {
+        "name": "Berry",
+        "label": "Berry",
+        "color": "#8c3a4f",
+        "images": [
+          "/img/products/velvet-satin-liprosenude.jpg",
+          "/img/products/velvet-satin-lip2.webp"
+        ],
+        "tintPhotos": true
+      },
+      {
+        "name": "Cocoa",
+        "label": "Cocoa",
+        "color": "#6b4029",
+        "images": [
+          "/img/products/velvet-satin-liprosenude.jpg",
+          "/img/products/velvet-satin-lip2.webp"
+        ],
+        "tintPhotos": true
+      }
     ]
   },
   {
@@ -39,7 +59,9 @@
     "description": "A dewy serum that brightens and hydrates.",
     "stock": 3,
     "soldOut": false,
-    "images": [],
+    "images": [
+      "/img/products/glow-serum.jpg"
+    ],
     "modelImage": "",
     "reviews": [],
     "category": "skincare",
@@ -56,14 +78,36 @@
     "description": "Builds length and drama without clumping.",
     "stock": 14,
     "soldOut": false,
-    "images": [],
+    "images": [
+      "/img/products/mascara.webp",
+      "/img/products/model-mascara-black.jpg"
+    ],
     "modelImage": "",
     "reviews": [],
     "category": "makeup",
     "tone": 265,
+    "winkMap": {
+      "/img/products/model-mascara-brown.jpg": "/img/products/model-mascara-brown-wink.jpg"
+    },
     "shades": [
-      "Black",
-      "Deep Brown"
+      {
+        "name": "Black",
+        "label": "Black",
+        "color": "#1a1a1a",
+        "images": [
+          "/img/products/mascara.webp",
+          "/img/products/model-mascara-black.jpg"
+        ]
+      },
+      {
+        "name": "Deep Brown",
+        "label": "Deep Brown",
+        "color": "#3b2419",
+        "images": [
+          "/img/products/mascara-brown.webp",
+          "/img/products/model-mascara-brown.jpg"
+        ]
+      }
     ]
   },
   {
@@ -76,14 +120,33 @@
     "description": "A rosy flush for a healthy glow.",
     "stock": 10,
     "soldOut": false,
-    "images": [],
+    "images": [
+      "/img/products/dawn-blush-peony.jpg",
+      "/img/products/model-dawn-blush-peony.png"
+    ],
     "modelImage": "",
     "reviews": [],
     "category": "makeup",
     "tone": 350,
     "shades": [
-      "Peony",
-      "Rosewood"
+      {
+        "name": "Peony",
+        "label": "Peony",
+        "color": "#e8a3ab",
+        "images": [
+          "/img/products/dawn-blush-peony.jpg",
+          "/img/products/model-dawn-blush-peony.png"
+        ]
+      },
+      {
+        "name": "Rosewood",
+        "label": "Rosewood",
+        "color": "#b5646b",
+        "images": [
+          "/img/products/dawn-blush-rosewood.jpg",
+          "/img/products/model-dawn-blush-rosewood.webp"
+        ]
+      }
     ]
   },
   {
@@ -96,7 +159,9 @@
     "description": "A rich cream that locks in hydration.",
     "stock": 6,
     "soldOut": false,
-    "images": [],
+    "images": [
+      "/img/products/hydra-cream.webp"
+    ],
     "modelImage": "",
     "reviews": [],
     "category": "skincare",
@@ -113,7 +178,9 @@
     "description": "A soft floral scent designed for everyday elegance.",
     "stock": 5,
     "soldOut": false,
-    "images": [],
+    "images": [
+      "/img/products/velvet-eau-de-parfum.webp"
+    ],
     "modelImage": "",
     "reviews": [],
     "category": "fragrance",

@@ -7,6 +7,10 @@ const emailService = require('../lib/emailService');
 
 const router = express.Router();
 
+function ah(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
+
 const SORTS = {
   featured: (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount || a.id - b.id,
   'price-asc': (a, b) => a.price - b.price,
@@ -15,8 +19,8 @@ const SORTS = {
   name: (a, b) => a.name.localeCompare(b.name)
 };
 
-router.get('/', (req, res) => {
-  const products = catalog.getProducts();
+router.get('/', ah(async (req, res) => {
+  const products = await catalog.getProducts();
   const featured = products.slice().sort(SORTS.featured).slice(0, 3);
   const arrivals = products.slice().sort((a, b) => b.id - a.id).slice(0, 4);
   const categories = store.CATEGORIES.map((category) => Object.assign({}, category, {
@@ -30,14 +34,14 @@ router.get('/', (req, res) => {
     arrivals,
     categories
   });
-});
+}));
 
-router.get('/shop', (req, res) => {
+router.get('/shop', ah(async (req, res) => {
   const searchTerm = String(req.query.search || '').trim();
   const category = ['makeup', 'skincare', 'fragrance'].includes(req.query.category) ? req.query.category : '';
   const sort = SORTS[req.query.sort] ? req.query.sort : 'featured';
 
-  let products = catalog.getProducts();
+  let products = await catalog.getProducts();
   if (category) {
     products = products.filter((product) => product.category === category);
   }
@@ -59,10 +63,10 @@ router.get('/shop', (req, res) => {
     activeCategory: category,
     activeSort: sort
   });
-});
+}));
 
-router.get('/product/:id', (req, res, next) => {
-  const product = catalog.findProduct(req.params.id);
+router.get('/product/:id', ah(async (req, res, next) => {
+  const product = await catalog.findProduct(req.params.id);
   if (!product) {
     const err = new Error('We could not find that product.');
     err.status = 404;
@@ -76,9 +80,9 @@ router.get('/product/:id', (req, res, next) => {
     menuId: 'shop',
     product,
     reviews,
-    related: catalog.relatedProducts(product, 3)
+    related: await catalog.relatedProducts(product, 3)
   });
-});
+}));
 
 router.get('/auth', (req, res) => {
   if (req.user) {
@@ -102,15 +106,15 @@ router.get('/checkout', (req, res) => {
   res.render('checkout', { page: 'Checkout', menuId: 'checkout' });
 });
 
-router.get('/admin', (req, res) => {
+router.get('/admin', ah(async (req, res) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.redirect('/auth');
   }
 
-  const products = catalog.getProducts();
-  const orders = store.read('orders').slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const messages = store.read('messages').slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const users = store.read('users');
+  const products = await catalog.getProducts();
+  const orders = (await store.read('orders')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const messages = (await store.read('messages')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const users = await store.read('users');
 
   const activeOrders = orders.filter((order) => order.status !== 'cancelled');
   const reviews = [];
@@ -140,7 +144,7 @@ router.get('/admin', (req, res) => {
     messages,
     stats
   });
-});
+}));
 
 router.get('/about', (req, res) => {
   res.render('about', { page: 'About us', menuId: 'about' });

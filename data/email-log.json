@@ -105,5 +105,149 @@
     "variant": "friendly",
     "delivered": false,
     "createdAt": "2026-07-16T12:01:44.149Z"
+  },
+  {
+    "id": 1784226553542,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784226553519 is confirmed 💐",
+    "variant": "modern",
+    "delivered": false,
+    "createdAt": "2026-07-16T18:29:13.542Z"
+  },
+  {
+    "id": 1784226553553,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": false,
+    "createdAt": "2026-07-16T18:29:13.554Z"
+  },
+  {
+    "id": 1784275734978,
+    "type": "otp",
+    "to": "luna@gmail.com",
+    "subject": "Your Beautique verification code",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-17T08:08:54.978Z"
+  },
+  {
+    "id": 1784276593907,
+    "type": "otp",
+    "to": "moukarzelanthony2@gmail.com",
+    "subject": "Your Beautique verification code",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-17T08:23:13.907Z"
+  },
+  {
+    "id": 1784276824440,
+    "type": "otp",
+    "to": "moukarzelanthony2@gmail.com",
+    "subject": "Your Beautique verification code",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-17T08:27:04.440Z"
+  },
+  {
+    "id": 1784278127805,
+    "type": "otp",
+    "to": "angelina.abinader@net.usj.edu.lb",
+    "subject": "Your Beautique verification code",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T08:48:47.805Z"
+  },
+  {
+    "id": 1784278421591,
+    "type": "otp",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Your Beautique verification code",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-17T08:53:41.591Z"
+  },
+  {
+    "id": 1784284070905,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (1/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:27:50.905Z"
+  },
+  {
+    "id": 1784284365664,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (4/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:32:45.664Z"
+  },
+  {
+    "id": 1784284425125,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Velvet Satin Lip (1/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:33:45.125Z"
+  },
+  {
+    "id": 1784285661472,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (5/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:54:21.472Z"
+  },
+  {
+    "id": 1784285661764,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (3/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:54:21.764Z"
+  },
+  {
+    "id": 1784285702926,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Glow Serum (5/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:55:02.926Z"
+  },
+  {
+    "id": 1784285804937,
+    "type": "review_notification",
+    "to": "admin@luna.com",
+    "subject": "New review: Velvet Satin Lip (5/5)",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-17T10:56:44.937Z"
+  },
+  {
+    "id": 1784527789630,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-20T06:09:49.630Z"
+  },
+  {
+    "id": 1784527804816,
+    "type": "order_cancellation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784527789533 has been cancelled",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-20T06:10:04.816Z"
   }
 ]

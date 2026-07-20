@@ -19,7 +19,7 @@ A modern beauty e-commerce demo built with **Node.js, Express 4, and EJS** — n
 
 **Admin dashboard** (`/admin`)
 - Revenue / orders / inventory / customer stats
-- Inline inventory editing, add & delete products
+- Inline inventory editing, add / edit / delete products, with photo uploads (gallery + model photo)
 - Order management: mark shipped / delivered, cancel with restock
 - Customer reviews and contact-form messages
 
@@ -44,6 +44,8 @@ Copy `.env.example` to `.env` (all values optional):
 
 | Variable | Purpose |
 | --- | --- |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Data storage backend. Leave both blank locally (falls back to `data/*.json` files). **Required on Vercel** — its filesystem is read-only, so JSON files don't persist there. Add an Upstash Redis integration from the Vercel Marketplace and it injects these automatically. |
+| `BLOB_READ_WRITE_TOKEN` | Image upload storage (admin dashboard). Leave blank locally (uploads save to `public/img/products/`). **Required on Vercel** for the same read-only-filesystem reason — add a Blob store from the Storage tab in your Vercel project and it injects this automatically. |
 | `RESEND_API_KEY` | Enables real email delivery |
 | `EMAIL_FROM` | From address for outgoing mail |
 | `ADMIN_INVITE_CODE` | Code required to sign up as admin (default `BEAUTIQUE-ADMIN`) |
@@ -54,10 +56,11 @@ Copy `.env.example` to `.env` (all values optional):
 ```
 app.js               Express app: middleware, security headers, error pages
 bin/www              HTTP server bootstrap
-lib/store.js         JSON-file data layer with atomic writes & migrations
+lib/store.js         Data layer: JSON files locally, Upstash Redis on Vercel
 lib/auth.js          Sessions, password hashing, auth middleware
 lib/catalog.js       Product decoration (ratings, availability)
 lib/emailService.js  Transactional email (Resend or dev mode)
+lib/uploads.js       Image uploads: local files locally, Vercel Blob on Vercel
 routes/index.js      Page routes (server-rendered EJS)
 routes/api.js        JSON API (auth, products, orders, reviews, contact)
 views/               EJS templates + partials

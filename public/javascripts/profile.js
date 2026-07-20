@@ -38,6 +38,52 @@
     });
   });
 
+  /* Delete account */
+  var deleteOpenBtn = B.$('#delete-account-open');
+  var deleteForm = B.$('#delete-account-form');
+  var deleteCancelBtn = B.$('#delete-account-cancel');
+  var deletePasswordInput = B.$('#delete-account-password');
+  var deleteStatus = B.$('#delete-account-status');
+
+  deleteOpenBtn.addEventListener('click', function () {
+    deleteOpenBtn.style.display = 'none';
+    deleteForm.style.display = '';
+    deletePasswordInput.focus();
+  });
+
+  deleteCancelBtn.addEventListener('click', function () {
+    deleteForm.style.display = 'none';
+    deleteOpenBtn.style.display = '';
+    deletePasswordInput.value = '';
+    deleteStatus.textContent = '';
+    deleteStatus.className = 'form-status';
+  });
+
+  deleteForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var password = deletePasswordInput.value;
+    if (!password) {
+      deleteStatus.textContent = 'Please enter your password.';
+      deleteStatus.className = 'form-status is-error';
+      return;
+    }
+    B.confirmDialog('Delete your account permanently?', 'This removes your account for good — it cannot be undone.')
+      .then(function (confirmed) {
+        if (!confirmed) return;
+        deleteStatus.textContent = 'Deleting…';
+        deleteStatus.className = 'form-status is-info';
+        B.api('/api/profile/delete', { method: 'POST', body: { password: password } })
+          .then(function () {
+            localStorage.removeItem('beautiqueCart');
+            window.location.href = '/auth';
+          })
+          .catch(function (err) {
+            deleteStatus.textContent = err.message;
+            deleteStatus.className = 'form-status is-error';
+          });
+      });
+  });
+
   /* Orders */
   var ordersList = B.$('#orders-list');
 

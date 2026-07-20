@@ -91,6 +91,7 @@
                   <td>
                     <div class="table-actions">
                       <button class="btn btn-soft btn-sm" data-save-product="<%= product.id %>" type="button">Save</button>
+                      <button class="btn btn-ghost btn-sm" data-edit-product="<%- JSON.stringify(product).replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>" type="button">Edit</button>
                       <button class="btn btn-danger btn-sm" data-delete-product="<%= product.id %>" data-product-name="<%= product.name %>" type="button">Delete</button>
                     </div>
                   </td>
@@ -163,14 +164,21 @@
           </div>
         <% } else { %>
           <% reviews.forEach(function(review) { %>
-            <div class="review-item">
+            <div class="review-item" data-review data-product-id="<%= review.productId %>" data-review-id="<%= review.id %>">
               <div class="review-item-head">
                 <strong><%= review.productName %></strong>
                 <span class="stars"><%- '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating) %></span>
                 <% if (review.verified) { %><span class="verified-tag">✓ Verified purchase</span><% } %>
                 <span class="review-date">by <%= review.userName %> · <%= dateLabel(review.createdAt) %></span>
               </div>
-              <% if (review.comment) { %><p><%= review.comment %></p><% } %>
+              <p class="review-comment-view" style="<%= review.comment ? '' : 'display:none;' %>"><%= review.comment %></p>
+              <textarea class="review-comment-edit" style="display:none;"><%= review.comment %></textarea>
+              <div class="table-actions" style="margin-top: 10px;">
+                <button class="btn btn-soft btn-sm" data-review-edit type="button">Edit</button>
+                <button class="btn btn-primary btn-sm" data-review-save type="button" style="display:none;">Save</button>
+                <button class="btn btn-ghost btn-sm" data-review-cancel type="button" style="display:none;">Cancel</button>
+                <button class="btn btn-danger btn-sm" data-review-delete type="button">Delete</button>
+              </div>
             </div>
           <% }); %>
         <% } %>
@@ -202,11 +210,11 @@
     </div>
   </section>
 
-  <!-- Add product modal -->
+  <!-- Add / edit product modal -->
   <div class="modal-backdrop" id="add-product-modal">
     <div class="modal">
       <div class="modal-head">
-        <h3>Add new product</h3>
+        <h3 id="product-modal-title">Add new product</h3>
         <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
       </div>
       <form id="add-product-form">
@@ -229,14 +237,26 @@
           </div>
           <div class="field"><label>Badge</label><input name="badge" type="text" placeholder="New"></div>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="💄" maxlength="4"></div>
-          <div class="field"><label>Image URL (optional)</label><input name="image" type="url" placeholder="https://…"></div>
-        </div>
+        <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="💄" maxlength="4"></div>
         <div class="field"><label>Description *</label><textarea name="description" required placeholder="A soft matte finish with lasting comfort."></textarea></div>
+
+        <div class="field">
+          <label>Gallery photos <span class="text-muted" style="font-weight:400;">(up to 8)</span></label>
+          <div class="image-manager" id="product-images-grid"></div>
+          <input type="file" id="product-image-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
+          <button class="btn btn-soft btn-sm" id="product-image-add" type="button">+ Add photos</button>
+        </div>
+
+        <div class="field">
+          <label>Model photo <span class="text-muted" style="font-weight:400;">(optional)</span></label>
+          <div class="image-manager" id="product-model-image-preview"></div>
+          <input type="file" id="product-model-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+          <button class="btn btn-soft btn-sm" id="product-model-image-add" type="button">+ Add model photo</button>
+        </div>
+
         <div class="modal-actions">
           <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
-          <button class="btn btn-primary btn-sm" type="submit">Add product</button>
+          <button class="btn btn-primary btn-sm" id="product-submit-btn" type="submit">Add product</button>
         </div>
         <div class="form-status" id="add-product-status"></div>
       </form>
