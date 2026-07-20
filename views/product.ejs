@@ -183,6 +183,22 @@
       </div>
     </div>
 
+    <% if (frequentlyBought.length) { %>
+      <div style="padding-bottom: 40px;">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Pairs well together</span>
+            <h2>Frequently bought together</h2>
+          </div>
+        </div>
+        <div class="grid grid-3">
+          <% frequentlyBought.forEach(function(product) { %>
+            <%- include('partials/product-card', { product: product }) %>
+          <% }); %>
+        </div>
+      </div>
+    <% } %>
+
     <% if (related.length) { %>
       <div style="padding-bottom: 40px;">
         <div class="section-head">

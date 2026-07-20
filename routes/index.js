@@ -80,7 +80,8 @@ router.get('/product/:id', ah(async (req, res, next) => {
     menuId: 'shop',
     product,
     reviews,
-    related: await catalog.relatedProducts(product, 3)
+    related: await catalog.relatedProducts(product, 3),
+    frequentlyBought: await catalog.frequentlyBoughtWith(product, 4)
   });
 }));
 
