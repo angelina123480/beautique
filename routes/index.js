@@ -116,7 +116,11 @@ router.get('/admin', ah(async (req, res) => {
   const messages = (await store.read('messages')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const users = await store.read('users');
 
-  const activeOrders = orders.filter((order) => order.status !== 'cancelled');
+  const adminIds = new Set(users.filter((user) => user.role === 'admin').map((user) => user.id));
+  /* Admins can shop too, but their own test/personal orders shouldn't
+     skew the store's real revenue/order stats. */
+  const customerOrders = orders.filter((order) => !adminIds.has(order.userId));
+  const activeCustomerOrders = customerOrders.filter((order) => order.status !== 'cancelled');
   const reviews = [];
   products.forEach((product) => {
     (product.reviews || []).forEach((review) => {
@@ -126,9 +130,9 @@ router.get('/admin', ah(async (req, res) => {
   reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const stats = {
-    revenue: activeOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
-    orders: orders.length,
-    pending: orders.filter((order) => order.status === 'confirmed').length,
+    revenue: activeCustomerOrders.reduce((sum, order) => sum + (Number(order.total) || 0), 0),
+    orders: customerOrders.length,
+    pending: customerOrders.filter((order) => order.status === 'confirmed').length,
     products: products.length,
     lowStock: products.filter((product) => !product.soldOut && product.stock > 0 && product.stock <= 5).length,
     customers: users.filter((user) => user.role !== 'admin').length,
