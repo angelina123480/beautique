@@ -16,6 +16,17 @@
     status.className = 'form-status' + (kind ? ' is-' + kind : '');
   }
 
+  var PASSWORD_REQUIREMENT_MESSAGE = 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.';
+
+  function isStrongPassword(value) {
+    return typeof value === 'string' &&
+      value.length >= 8 &&
+      /[A-Z]/.test(value) &&
+      /[a-z]/.test(value) &&
+      /[0-9]/.test(value) &&
+      /[^A-Za-z0-9]/.test(value);
+  }
+
   function setMode(next) {
     mode = next;
     B.$$('.auth-toggle').forEach(function (btn) {
@@ -28,6 +39,7 @@
     B.$('#auth-submit').textContent = isSignup ? 'Create account' : 'Sign in';
     B.$('#auth-password').setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
     B.$('#auth-forgot-link').style.display = isSignup ? 'none' : '';
+    B.$('#password-hint').style.display = isSignup ? '' : 'none';
     setStatus('');
   }
 
@@ -159,8 +171,8 @@
       setStatus('Please enter the 6-digit code.', 'error');
       return;
     }
-    if (password.length < 6) {
-      setStatus('Password must be at least 6 characters.', 'error');
+    if (!isStrongPassword(password)) {
+      setStatus(PASSWORD_REQUIREMENT_MESSAGE, 'error');
       return;
     }
     setStatus('Updating…', 'info');
@@ -206,6 +218,10 @@
 
     if (!email || !password) {
       setStatus('Please fill in your email and password.', 'error');
+      return;
+    }
+    if (mode === 'signup' && !isStrongPassword(password)) {
+      setStatus(PASSWORD_REQUIREMENT_MESSAGE, 'error');
       return;
     }
 

@@ -63,18 +63,5 @@
     "otpVerified": false,
     "createdAt": "2026-07-17T08:48:47.799Z",
     "otpExpires": "2026-07-17T08:58:47.799Z"
-  },
-  {
-    "id": 1784278421545,
-    "name": "Angelina Abi Nader",
-    "email": "angelina.abinader@gmail.com",
-    "password": "scrypt:ee7fd62f0b248d139f590f7f0f828718:248eda0264b328fe5b0d33bdee22c5f212dbf2585910ae9966e6b77fec194c88152f4bc8db1eb5a33e28706a1d5788ccf45533f2cbb5e4f6026329ec14ff1b54",
-    "role": "client",
-    "phone": "",
-    "address": "",
-    "otp": "",
-    "otpVerified": true,
-    "createdAt": "2026-07-17T08:53:41.585Z",
-    "otpExpires": ""
   }
 ]

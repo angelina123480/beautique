@@ -55,6 +55,17 @@ function isValidEmail(value) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+const PASSWORD_REQUIREMENT_MESSAGE = 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.';
+
+function isStrongPassword(value) {
+  return typeof value === 'string' &&
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /[0-9]/.test(value) &&
+    /[^A-Za-z0-9]/.test(value);
+}
+
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
@@ -107,8 +118,8 @@ router.post('/auth/signup', ah(async (req, res) => {
   if (!isValidEmail(email)) {
     return res.status(400).json({ ok: false, message: 'Please enter a valid email address.' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ ok: false, message: 'Password must be at least 6 characters.' });
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ ok: false, message: PASSWORD_REQUIREMENT_MESSAGE });
   }
 
   let role = payload.role === 'admin' ? 'admin' : 'client';
@@ -226,8 +237,8 @@ router.post('/auth/reset-password', ah(async (req, res) => {
   const email = normalizeEmail(payload.email);
   const password = String(payload.password || '');
 
-  if (password.length < 6) {
-    return res.status(400).json({ ok: false, message: 'Password must be at least 6 characters.' });
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ ok: false, message: PASSWORD_REQUIREMENT_MESSAGE });
   }
 
   const users = await store.read('users');
