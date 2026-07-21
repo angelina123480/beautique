@@ -7,7 +7,7 @@
     "badge": "Bestseller",
     "emoji": "💄",
     "description": "A soft matte finish with lasting comfort.",
-    "stock": 7,
+    "stock": 3,
     "soldOut": false,
     "images": [
       "/img/products/velvet-satin-liprosenude.jpg",
@@ -57,7 +57,7 @@
     "badge": "New",
     "emoji": "✨",
     "description": "A dewy serum that brightens and hydrates.",
-    "stock": 2,
+    "stock": 14,
     "soldOut": false,
     "images": [
       "/img/products/glow-serum.jpg"
@@ -68,10 +68,12 @@
     "tone": 35,
     "shades": [],
     "skinGoals": [
-      "glow",
       "hydration",
+      "glow",
       "brightening"
-    ]
+    ],
+    "salePrice": null,
+    "scentFamily": []
   },
   {
     "id": 3,
@@ -81,7 +83,7 @@
     "badge": "Top Rated",
     "emoji": "👁️",
     "description": "Builds length and drama without clumping.",
-    "stock": 14,
+    "stock": 7,
     "soldOut": false,
     "images": [
       "/img/products/mascara.webp",

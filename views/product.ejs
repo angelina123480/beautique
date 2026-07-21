@@ -107,6 +107,7 @@
                   data-tone="<%= product.tone %>"
                   data-image="<%= (product.images && product.images[0]) || '' %>"
                   data-stock="<%= product.stock %>"
+                  data-has-shades="<%= product.shades && product.shades.length ? '1' : '' %>"
                   aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
         </div>
 

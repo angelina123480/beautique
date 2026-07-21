@@ -22,24 +22,20 @@ if (fs.existsSync(dotenvPath)) {
   });
 }
 
-const store = require('./lib/store');
 const auth = require('./lib/auth');
 const icons = require('./lib/icons');
 const rewards = require('./lib/rewards');
 const scents = require('./lib/scents');
 const skinGoals = require('./lib/skin-goals');
 
-/* store.init() is async (it may hit Redis) and only needs to run once per
-   process — cache the promise so every request just awaits the same one. */
-let initPromise = null;
-function ensureInit() {
-  if (!initPromise) {
-    initPromise = store.init();
-  }
-  return initPromise;
-}
-
 const app = express();
+
+/* Vercel terminates TLS in front of the function and forwards over plain
+   HTTP, setting X-Forwarded-Proto — without trusting that header, req.protocol
+   always reports "http" in production, which breaks the Google OAuth
+   redirect_uri (it wouldn't match the "https://" URI registered in Google
+   Cloud Console). */
+app.set('trust proxy', 1);
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -91,9 +87,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  ensureInit().then(() => next()).catch(next);
-});
 app.use(auth.attachUser);
 
 app.use('/api', require('./routes/api'));

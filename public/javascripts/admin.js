@@ -55,8 +55,7 @@
         method: 'PATCH',
         body: {
           price: Number(row.querySelector('input[name="price"]').value) || 0,
-          stock: Number(row.querySelector('input[name="stock"]').value) || 0,
-          soldOut: row.querySelector('input[name="soldOut"]').checked
+          stock: Number(row.querySelector('input[name="stock"]').value) || 0
         }
       }).then(function () {
         B.toast('Inventory updated');

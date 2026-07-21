@@ -141,27 +141,35 @@
         setStatus('');
       }
 
+      lastCapture = { skinLab: result.skinLab };
+      if (saveBtn) saveBtn.disabled = false;
       renderResults(result.skinLab);
-      maybeRememberPhoto(result.skinLab);
     });
   }
 
-  /* ---------------- Remember photo (opt-in, local only, per-season) ----------------
+  /* ---------------- Save photo (opt-in, local only, per-season) ----------------
      Nothing here ever leaves the browser: it's a plain localStorage entry
      on this device (via window.Beautique.seasonalShades, shared with the
-     profile page), written only if the user ticks the consent checkbox,
-     and readable/removable only by this same site in this same browser.
+     profile page), written only when the user clicks Save, and
+     readable/removable only by this same site in this same browser.
      Skin tone shifts with tanning/season for a lot of people, so this
-     supports a separate "summer" and "winter" reading rather than one. */
+     supports a separate "summer" and "winter" reading rather than one —
+     and since the whole point is two different readings, saving the exact
+     same photo for both seasons is refused. */
 
-  var consentBox = B.$('#matcher-remember-consent');
   var seasonPicker = B.$('#matcher-season-picker');
+  var saveBtn = B.$('#matcher-save-btn');
   var rememberedCard = B.$('#matcher-remembered');
   var rememberedGrid = B.$('#matcher-remembered-grid');
+  var lastCapture = null; // { skinLab } for whatever photo is currently on the canvas
 
   function selectedSeason() {
     var active = seasonPicker && seasonPicker.querySelector('.matcher-season-btn.is-active');
     return active ? active.getAttribute('data-season') : 'summer';
+  }
+
+  function otherSeason(season) {
+    return season === 'summer' ? 'winter' : 'summer';
   }
 
   if (seasonPicker) {
@@ -172,20 +180,28 @@
     });
   }
 
-  function maybeRememberPhoto(skinLab) {
-    if (!consentBox || !consentBox.checked) return;
-    try {
-      var photoDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      B.seasonalShades.save(selectedSeason(), {
-        photoDataUrl: photoDataUrl,
-        skinLab: skinLab,
-        savedAt: Date.now()
-      });
-      renderRememberedCard();
-    } catch (err) {
-      // Storage full or unavailable (e.g. private browsing) — fail silently,
-      // remembering the photo is a convenience, not a required step.
-    }
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function () {
+      if (!lastCapture) return;
+      var season = selectedSeason();
+      try {
+        var photoDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        var existingOther = B.seasonalShades.get()[otherSeason(season)];
+        if (existingOther && existingOther.photoDataUrl === photoDataUrl) {
+          setStatus('This is the same photo already saved for your ' + otherSeason(season) + ' shade — use a different photo for your ' + season + ' shade.', 'error');
+          return;
+        }
+        B.seasonalShades.save(season, {
+          photoDataUrl: photoDataUrl,
+          skinLab: lastCapture.skinLab,
+          savedAt: Date.now()
+        });
+        renderRememberedCard();
+        setStatus('Saved as your ' + season + ' shade.', 'success');
+      } catch (err) {
+        setStatus('Could not save this photo (your browser storage may be full).', 'error');
+      }
+    });
   }
 
   var SEASON_LABELS = { summer: '☀️ Summer', winter: '❄️ Winter' };
@@ -228,6 +244,8 @@
           // We already have this photo's skin-tone reading saved, so we can
           // skip re-running face detection entirely and jump straight to results.
           setStatus('');
+          lastCapture = { skinLab: entry.skinLab };
+          if (saveBtn) saveBtn.disabled = false;
           renderResults(entry.skinLab);
         };
         img.src = entry.photoDataUrl;

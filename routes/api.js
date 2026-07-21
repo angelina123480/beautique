@@ -4,9 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const multer = require('multer');
-const store = require('../lib/store');
+const passwords = require('../lib/passwords');
 const auth = require('../lib/auth');
 const catalog = require('../lib/catalog');
+const categories = require('../lib/categories');
+const messages = require('../lib/messages');
+const users = require('../lib/users');
+const products = require('../lib/products');
+const orders = require('../lib/orders');
 const emailService = require('../lib/emailService');
 const uploads = require('../lib/uploads');
 const rewards = require('../lib/rewards');
@@ -50,6 +55,15 @@ const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_FLAT = 5.95;
 const ORDER_STATUSES = ['confirmed', 'shipped', 'delivered', 'cancelled'];
 
+/* We currently only deliver within Lebanon. Addresses are free text (no
+   structured country field), so this is a simple, honest best-effort
+   check rather than real address validation — it just requires the
+   country to be spelled out somewhere in what the customer typed. */
+const DELIVERY_COUNTRY_PATTERN = /lebanon|liban/i;
+function isDeliverableAddress(address) {
+  return DELIVERY_COUNTRY_PATTERN.test(String(address || ''));
+}
+
 /* Express 4 doesn't forward rejected promises to the error handler on its own. */
 function ah(fn) {
   return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -87,11 +101,9 @@ function generateOtp() {
  * provider is configured (local demo), the code is returned so the UI can
  * display it instead of leaving the user stranded.
  */
-async function issueOtp(users, user) {
+async function issueOtp(user) {
   const otp = generateOtp();
-  user.otp = otp;
-  user.otpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
-  await store.write('users', users);
+  await users.updateUser(user.id, { otp, otpExpires: new Date(Date.now() + OTP_TTL_MS).toISOString() });
   /* Must be awaited, not fire-and-forget — on Vercel the function can be
      frozen the instant the response goes out, killing any still-pending
      background work before it actually reaches Resend. */
@@ -100,11 +112,9 @@ async function issueOtp(users, user) {
 }
 
 /** Same idea as issueOtp, but for the separate "forgot password" reset code. */
-async function issueResetOtp(users, user) {
+async function issueResetOtp(user) {
   const otp = generateOtp();
-  user.resetOtp = otp;
-  user.resetOtpExpires = new Date(Date.now() + OTP_TTL_MS).toISOString();
-  await store.write('users', users);
+  await users.updateUser(user.id, { resetOtp: otp, resetOtpExpires: new Date(Date.now() + OTP_TTL_MS).toISOString() });
   await emailService.sendEmail('password_reset', user.email, { firstName: user.name, otp }).catch(() => {});
   return emailService.isConfigured() ? undefined : otp;
 }
@@ -135,8 +145,7 @@ router.post('/auth/signup', ah(async (req, res) => {
     return res.status(403).json({ ok: false, message: 'Invalid admin invite code.' });
   }
 
-  const users = await store.read('users');
-  const existing = users.find((user) => normalizeEmail(user.email) === email);
+  const existing = await users.getUserByEmail(email);
 
   if (existing && existing.otpVerified) {
     return res.status(409).json({ ok: false, message: 'An account with this email already exists. Please sign in.' });
@@ -145,41 +154,38 @@ router.post('/auth/signup', ah(async (req, res) => {
   let account = existing;
   if (account) {
     // Unverified leftover from an abandoned signup — let it be claimed again.
-    account.name = name || account.name;
-    account.password = store.hashPassword(password);
-    account.role = role;
+    account = await users.updateUser(account.id, {
+      name: name || account.name,
+      password: passwords.hashPassword(password),
+      role
+    });
   } else {
-    account = {
+    account = await users.createUser({
       id: Date.now(),
       name: name || 'Customer',
       email,
-      password: store.hashPassword(password),
+      password: passwords.hashPassword(password),
       role,
-      phone: '',
-      address: '',
       otp: '',
-      otpVerified: false,
-      createdAt: new Date().toISOString()
-    };
-    users.push(account);
+      otpVerified: false
+    });
   }
 
-  const devOtp = await issueOtp(users, account);
+  const devOtp = await issueOtp(account);
   res.json({ ok: true, requiresOtp: true, email: account.email, devOtp });
 }));
 
 router.post('/auth/signin', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
-  const users = await store.read('users');
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+  const user = await users.getUserByEmail(email);
 
-  if (!user || !store.verifyPassword(String(payload.password || ''), user.password)) {
+  if (!user || !passwords.verifyPassword(String(payload.password || ''), user.password)) {
     return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
   }
 
   if (!user.otpVerified) {
-    const devOtp = await issueOtp(users, user);
+    const devOtp = await issueOtp(user);
     return res.json({ ok: true, requiresOtp: true, email: user.email, devOtp });
   }
 
@@ -190,8 +196,7 @@ router.post('/auth/signin', ah(async (req, res) => {
 router.post('/auth/verify-otp', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
-  const users = await store.read('users');
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+  const user = await users.getUserByEmail(email);
 
   if (!user) {
     return res.status(404).json({ ok: false, message: 'No account found for that email.' });
@@ -203,10 +208,7 @@ router.post('/auth/verify-otp', ah(async (req, res) => {
     return res.status(401).json({ ok: false, message: 'That code has expired. Request a new one.' });
   }
 
-  user.otpVerified = true;
-  user.otp = '';
-  user.otpExpires = '';
-  await store.write('users', users);
+  await users.updateUser(user.id, { otpVerified: true, otp: '', otpExpires: null });
 
   await auth.createSession(res, user.id);
   res.json({ ok: true, user: auth.safeUser(user) });
@@ -214,29 +216,27 @@ router.post('/auth/verify-otp', ah(async (req, res) => {
 
 router.post('/auth/resend-otp', ah(async (req, res) => {
   const email = normalizeEmail((req.body || {}).email);
-  const users = await store.read('users');
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+  const user = await users.getUserByEmail(email);
 
   if (!user || user.otpVerified) {
     // Do not reveal whether the account exists.
     return res.json({ ok: true, message: 'If a verification is pending, a new code has been sent.' });
   }
 
-  const devOtp = await issueOtp(users, user);
+  const devOtp = await issueOtp(user);
   res.json({ ok: true, message: 'A new code is on its way.', devOtp });
 }));
 
 router.post('/auth/forgot-password', ah(async (req, res) => {
   const email = normalizeEmail((req.body || {}).email);
-  const users = await store.read('users');
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+  const user = await users.getUserByEmail(email);
 
   if (!user) {
     // Do not reveal whether the account exists.
     return res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.' });
   }
 
-  const devOtp = await issueResetOtp(users, user);
+  const devOtp = await issueResetOtp(user);
   res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.', devOtp });
 }));
 
@@ -249,8 +249,7 @@ router.post('/auth/reset-password', ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: PASSWORD_REQUIREMENT_MESSAGE });
   }
 
-  const users = await store.read('users');
-  const user = users.find((entry) => normalizeEmail(entry.email) === email);
+  const user = await users.getUserByEmail(email);
 
   if (!user || !user.resetOtp || String(user.resetOtp) !== String(payload.otp || '').trim()) {
     return res.status(401).json({ ok: false, message: 'That code is not valid. Please try again.' });
@@ -259,10 +258,7 @@ router.post('/auth/reset-password', ah(async (req, res) => {
     return res.status(401).json({ ok: false, message: 'That code has expired. Request a new one.' });
   }
 
-  user.password = store.hashPassword(password);
-  user.resetOtp = '';
-  user.resetOtpExpires = '';
-  await store.write('users', users);
+  await users.updateUser(user.id, { password: passwords.hashPassword(password), resetOtp: '', resetOtpExpires: null });
 
   res.json({ ok: true, message: 'Password updated. Please sign in.' });
 }));
@@ -278,53 +274,51 @@ router.post('/auth/signout', ah(async (req, res) => {
 
 router.post('/profile/update', auth.requireUser, ah(async (req, res) => {
   const payload = req.body || {};
-  const users = await store.read('users');
-  const current = users.find((entry) => entry.id === req.user.id);
-
-  if (!current) {
-    return res.status(404).json({ ok: false, message: 'User not found.' });
-  }
+  const current = req.user;
+  const patch = {};
 
   if (payload.email !== undefined) {
     const email = normalizeEmail(payload.email);
     if (!isValidEmail(email)) {
       return res.status(400).json({ ok: false, message: 'Please enter a valid email address.' });
     }
-    const taken = users.some((entry) => entry.id !== current.id && normalizeEmail(entry.email) === email);
-    if (taken) {
+    if (await users.emailTaken(email, current.id)) {
       return res.status(409).json({ ok: false, message: 'That email is already in use by another account.' });
     }
-    current.email = email;
+    patch.email = email;
   }
 
   if (payload.name !== undefined && String(payload.name).trim()) {
-    current.name = String(payload.name).trim();
+    patch.name = String(payload.name).trim();
   }
   if (payload.phone !== undefined) {
-    current.phone = String(payload.phone).trim();
+    patch.phone = String(payload.phone).trim();
   }
   if (payload.address !== undefined) {
-    current.address = String(payload.address).trim();
+    const address = String(payload.address).trim();
+    if (address && !isDeliverableAddress(address)) {
+      return res.status(400).json({ ok: false, message: 'Sorry, we currently only deliver within Lebanon — please include "Lebanon" in your address.' });
+    }
+    patch.address = address;
   }
 
-  await store.write('users', users);
-  res.json({ ok: true, user: auth.safeUser(current) });
+  const updated = await users.updateUser(current.id, patch);
+  res.json({ ok: true, user: auth.safeUser(updated) });
 }));
 
 router.post('/profile/delete', auth.requireUser, ah(async (req, res) => {
   const password = String((req.body || {}).password || '');
-  const users = await store.read('users');
-  const current = users.find((entry) => entry.id === req.user.id);
+  const current = req.user;
 
-  if (!current || !store.verifyPassword(password, current.password)) {
+  if (!passwords.verifyPassword(password, current.password)) {
     return res.status(401).json({ ok: false, message: 'Incorrect password.' });
   }
 
-  if (current.role === 'admin' && users.filter((entry) => entry.role === 'admin').length <= 1) {
+  if (current.role === 'admin' && (await users.countAdmins()) <= 1) {
     return res.status(400).json({ ok: false, message: 'You are the only admin account — promote another admin before deleting this one.' });
   }
 
-  await store.write('users', users.filter((entry) => entry.id !== current.id));
+  await users.deleteUser(current.id);
   await auth.destroySession(req, res);
   res.json({ ok: true });
 }));
@@ -342,7 +336,7 @@ function slugify(value) {
 }
 
 router.get('/categories', ah(async (req, res) => {
-  res.json({ ok: true, categories: await store.read('categories') });
+  res.json({ ok: true, categories: await categories.getCategories() });
 }));
 
 router.post('/categories', auth.requireAdmin, ah(async (req, res) => {
@@ -357,38 +351,32 @@ router.post('/categories', auth.requireAdmin, ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'That name doesn\'t produce a usable category id — try adding some letters or numbers.' });
   }
 
-  const categories = await store.read('categories');
-  if (categories.some((entry) => entry.id === id)) {
+  if (await categories.categoryExists(id)) {
     return res.status(409).json({ ok: false, message: 'A category with that name already exists.' });
   }
 
-  const category = {
+  const category = await categories.createCategory({
     id,
     title,
     emoji: String(payload.emoji || '').trim() || '🌸',
     tone: Math.min(360, Math.max(0, Math.round(Number(payload.tone)) || 0)),
     text: String(payload.text || '').trim()
-  };
-  categories.push(category);
-  await store.write('categories', categories);
+  });
   res.json({ ok: true, category });
 }));
 
 router.delete('/categories/:id', auth.requireAdmin, ah(async (req, res) => {
-  const categories = await store.read('categories');
-  const index = categories.findIndex((entry) => entry.id === req.params.id);
-  if (index === -1) {
+  if (!(await categories.categoryExists(req.params.id))) {
     return res.status(404).json({ ok: false, message: 'Category not found.' });
   }
 
-  const products = await store.read('products');
-  const inUse = products.some((product) => product.category === req.params.id);
+  const allProducts = await products.getAllProducts();
+  const inUse = allProducts.some((product) => product.category === req.params.id);
   if (inUse) {
     return res.status(400).json({ ok: false, message: 'Move or delete the products in this category before removing it.' });
   }
 
-  const removed = categories.splice(index, 1)[0];
-  await store.write('categories', categories);
+  const removed = await categories.deleteCategory(req.params.id);
   res.json({ ok: true, category: removed });
 }));
 
@@ -423,7 +411,6 @@ function applyProductFields(product, payload, validCategoryIds) {
   }
   if (payload.description !== undefined) product.description = String(payload.description).trim();
   if (payload.stock !== undefined) product.stock = Math.max(0, Math.floor(Number(payload.stock) || 0));
-  if (payload.soldOut !== undefined) product.soldOut = payload.soldOut === true;
   if (payload.images !== undefined && Array.isArray(payload.images)) {
     product.images = payload.images.map(String).filter(Boolean).slice(0, 8);
   }
@@ -464,25 +451,27 @@ function applyProductFields(product, payload, validCategoryIds) {
     product.skinGoals = payload.skinGoals.map(String).filter((tag) => SKIN_GOALS.has(tag));
   }
   if (payload.modelImage !== undefined) product.modelImage = String(payload.modelImage).trim();
-  if (product.stock <= 0) product.soldOut = true;
-  if (product.soldOut) product.stock = 0;
+  /* Stock is the single source of truth for availability — otherwise a
+     "Sold out" checkbox left checked from before a restock (it only gets
+     checked automatically when stock hits 0, never unchecked automatically)
+     would silently wipe the new stock count straight back to 0. */
+  product.soldOut = product.stock <= 0;
 }
 
 /* One-off/repeatable admin action: pushes the products+categories bundled
-   with the currently deployed code into whichever store.js backend is
-   active (Redis in production, the local files in dev) — so a catalog
-   built up locally (or edited directly in the repo) can be brought to
-   production without needing a terminal or Redis credentials at all,
-   just an admin login in the browser. Scoped to products/categories only
-   — never touches users/orders, so it can't clobber real customer data. */
+   with the currently deployed code into the database — so a catalog built
+   up locally (or edited directly in the repo) can be brought to production
+   without needing a terminal or database credentials at all, just an admin
+   login in the browser. Scoped to products/categories only — never touches
+   users/orders, so it can't clobber real customer data. */
 router.post('/admin/sync-catalog', auth.requireAdmin, ah(async (req, res) => {
-  const products = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'products.json'), 'utf8'));
-  const categories = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'categories.json'), 'utf8'));
+  const productData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'products.json'), 'utf8'));
+  const categoryData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'categories.json'), 'utf8'));
 
-  await store.write('products', products);
-  await store.write('categories', categories);
+  await products.replaceAllProducts(productData);
+  await categories.replaceAllCategories(categoryData);
 
-  res.json({ ok: true, productsCount: products.length, categoriesCount: categories.length });
+  res.json({ ok: true, productsCount: productData.length, categoriesCount: categoryData.length });
 }));
 
 router.post('/products', auth.requireAdmin, ah(async (req, res) => {
@@ -491,17 +480,17 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Name, brand, price, and description are required.' });
   }
 
-  const [products, categories] = await Promise.all([store.read('products'), store.read('categories')]);
-  const validCategoryIds = new Set(categories.map((entry) => entry.id));
+  const [nextId, categoryList] = await Promise.all([products.nextProductId(), categories.getCategories()]);
+  const validCategoryIds = new Set(categoryList.map((entry) => entry.id));
   const product = {
-    id: store.nextId(products),
+    id: nextId,
     name: '',
     brand: '',
     price: 0,
     salePrice: null,
     badge: '',
     emoji: '🌸',
-    category: validCategoryIds.has('makeup') ? 'makeup' : (categories[0] && categories[0].id) || '',
+    category: validCategoryIds.has('makeup') ? 'makeup' : (categoryList[0] && categoryList[0].id) || '',
     tone: Math.floor(Math.random() * 360),
     description: '',
     stock: 0,
@@ -512,34 +501,30 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
   };
   applyProductFields(product, payload, validCategoryIds);
 
-  products.push(product);
-  await store.write('products', products);
-  res.json({ ok: true, product: catalog.decorate(product) });
+  const created = await products.createProduct(product);
+  res.json({ ok: true, product: catalog.decorate(created) });
 }));
 
 router.patch('/products/:id', auth.requireAdmin, ah(async (req, res) => {
-  const products = await store.read('products');
-  const product = products.find((item) => item.id === Number(req.params.id));
+  const product = await products.getProductById(Number(req.params.id));
   if (!product) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
-  const validCategoryIds = new Set((await store.read('categories')).map((entry) => entry.id));
+  const validCategoryIds = new Set((await categories.getCategories()).map((entry) => entry.id));
   applyProductFields(product, req.body || {}, validCategoryIds);
-  await store.write('products', products);
-  res.json({ ok: true, product: catalog.decorate(product) });
+  const saved = await products.saveProduct(product);
+  res.json({ ok: true, product: catalog.decorate(saved) });
 }));
 
 router.delete('/products/:id', auth.requireAdmin, ah(async (req, res) => {
-  const products = await store.read('products');
-  const index = products.findIndex((item) => item.id === Number(req.params.id));
-  if (index === -1) {
+  const product = await products.getProductById(Number(req.params.id));
+  if (!product) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
-  const removed = products.splice(index, 1)[0];
-  await store.write('products', products);
-  res.json({ ok: true, product: removed });
+  await products.deleteProduct(product.id);
+  res.json({ ok: true, product });
 }));
 
 /* ------------------------------------------------------------------ *
@@ -547,8 +532,7 @@ router.delete('/products/:id', auth.requireAdmin, ah(async (req, res) => {
  * ------------------------------------------------------------------ */
 
 router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
-  const products = await store.read('products');
-  const product = products.find((item) => item.id === Number(req.params.id));
+  const product = await products.getProductById(Number(req.params.id));
   if (!product) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
@@ -557,14 +541,9 @@ router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
   const rating = Math.min(5, Math.max(1, Math.round(Number(payload.rating) || 5)));
   const comment = String(payload.comment || '').trim().slice(0, 1000);
 
-  const orders = await store.read('orders');
-  const verifiedPurchase = orders.some((order) =>
-    order.userId === req.user.id &&
-    order.status !== 'cancelled' &&
-    (order.items || []).some((item) => item.productId === product.id));
+  const verifiedPurchase = await orders.hasVerifiedPurchase(req.user.id, product.id);
 
-  product.reviews = product.reviews || [];
-  const review = {
+  const review = await products.addReview(product.id, {
     id: Date.now(),
     userId: req.user.id,
     userName: req.user.name || 'Customer',
@@ -572,12 +551,10 @@ router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
     comment,
     verified: verifiedPurchase,
     createdAt: new Date().toISOString()
-  };
+  });
   product.reviews.push(review);
 
-  await store.write('products', products);
-
-  const admin = (await store.read('users')).find((account) => account.role === 'admin');
+  const admin = await users.getAdminUser();
   if (admin && admin.email) {
     await emailService.sendEmail('review_notification', admin.email, {
       firstName: admin.name,
@@ -592,32 +569,18 @@ router.post('/products/:id/reviews', auth.requireUser, ah(async (req, res) => {
 }));
 
 router.get('/reviews', auth.requireAdmin, ah(async (req, res) => {
-  const reviews = [];
-  (await store.read('products')).forEach((product) => {
-    (product.reviews || []).forEach((review) => {
-      reviews.push({
-        productId: product.id,
-        productName: product.name,
-        rating: review.rating,
-        comment: review.comment,
-        userName: review.userName,
-        verified: Boolean(review.verified),
-        createdAt: review.createdAt
-      });
-    });
-  });
-  reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const reviews = await products.getAllReviews();
   res.json({ ok: true, reviews });
 }));
 
 router.patch('/products/:productId/reviews/:reviewId', auth.requireUser, ah(async (req, res) => {
-  const products = await store.read('products');
-  const product = products.find((item) => item.id === Number(req.params.productId));
-  if (!product) {
+  const productId = Number(req.params.productId);
+  const reviewId = Number(req.params.reviewId);
+  if (!(await products.productExists(productId))) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
-  const review = (product.reviews || []).find((entry) => entry.id === Number(req.params.reviewId));
+  const review = await products.getReview(productId, reviewId);
   if (!review) {
     return res.status(404).json({ ok: false, message: 'Review not found.' });
   }
@@ -626,36 +589,30 @@ router.patch('/products/:productId/reviews/:reviewId', auth.requireUser, ah(asyn
   }
 
   const payload = req.body || {};
-  if (payload.comment !== undefined) {
-    review.comment = String(payload.comment).trim().slice(0, 1000);
-  }
-  if (payload.rating !== undefined) {
-    review.rating = Math.min(5, Math.max(1, Math.round(Number(payload.rating) || review.rating)));
-  }
-  review.moderatedAt = new Date().toISOString();
-
-  await store.write('products', products);
-  res.json({ ok: true, review });
+  const updated = await products.updateReview(reviewId, {
+    comment: payload.comment !== undefined ? String(payload.comment).trim().slice(0, 1000) : undefined,
+    rating: payload.rating !== undefined ? Math.min(5, Math.max(1, Math.round(Number(payload.rating) || review.rating))) : undefined,
+    moderatedAt: new Date().toISOString()
+  });
+  res.json({ ok: true, review: updated });
 }));
 
 router.delete('/products/:productId/reviews/:reviewId', auth.requireUser, ah(async (req, res) => {
-  const products = await store.read('products');
-  const product = products.find((item) => item.id === Number(req.params.productId));
-  if (!product) {
+  const productId = Number(req.params.productId);
+  const reviewId = Number(req.params.reviewId);
+  if (!(await products.productExists(productId))) {
     return res.status(404).json({ ok: false, message: 'Product not found.' });
   }
 
-  const index = (product.reviews || []).findIndex((entry) => entry.id === Number(req.params.reviewId));
-  if (index === -1) {
+  const review = await products.getReview(productId, reviewId);
+  if (!review) {
     return res.status(404).json({ ok: false, message: 'Review not found.' });
   }
-  const review = product.reviews[index];
   if (req.user.role !== 'admin' && review.userId !== req.user.id) {
     return res.status(403).json({ ok: false, message: 'You can only delete your own review.' });
   }
 
-  product.reviews.splice(index, 1);
-  await store.write('products', products);
+  await products.deleteReview(productId, reviewId);
   res.json({ ok: true });
 }));
 
@@ -663,13 +620,56 @@ router.delete('/products/:productId/reviews/:reviewId', auth.requireUser, ah(asy
  * Orders
  * ------------------------------------------------------------------ */
 
-router.get('/orders', auth.requireUser, ah(async (req, res) => {
-  let orders = await store.read('orders');
-  if (req.user.role !== 'admin') {
-    orders = orders.filter((order) => order.userId === req.user.id);
+/* Turns an unlocked reward tier into a one-time discount code the customer
+   can hang onto and apply at checkout whenever they like — separate from
+   actually using it, so redeeming doesn't have to happen in the same
+   session as placing an order. */
+router.post('/rewards/redeem', auth.requireUser, ah(async (req, res) => {
+  const tierThreshold = Number((req.body || {}).tier);
+  const tier = rewards.TIERS.find((entry) => entry.threshold === tierThreshold);
+  if (!tier) {
+    return res.status(400).json({ ok: false, message: 'Not a valid reward tier.' });
   }
-  orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  res.json({ ok: true, orders });
+
+  const userRecord = await users.getUserById(req.user.id);
+  if (!userRecord) {
+    return res.status(404).json({ ok: false, message: 'Account not found.' });
+  }
+
+  /* Gate eligibility on lifetime points earned, not the current spendable
+     balance — otherwise redeeming a lower tier (which spends points) would
+     retroactively re-lock a higher tier the customer already qualified for. */
+  const lifetimePoints = Number(userRecord.lifetimePoints) || Number(userRecord.rewardPoints) || 0;
+  const balance = Number(userRecord.rewardPoints) || 0;
+  const redeemedTiers = Array.isArray(userRecord.redeemedTiers) ? userRecord.redeemedTiers : [];
+  if (lifetimePoints < tier.threshold) {
+    return res.status(400).json({ ok: false, message: 'You don’t have enough points for this tier yet.' });
+  }
+  if (redeemedTiers.includes(tier.threshold)) {
+    return res.status(400).json({ ok: false, message: 'This tier has already been redeemed.' });
+  }
+
+  const code = rewards.generateCode();
+  await users.updateUser(userRecord.id, {
+    redeemedTiers: redeemedTiers.concat(tier.threshold),
+    lifetimePoints,
+    rewardPoints: Math.max(0, balance - tier.threshold)
+  });
+  await users.addDiscountCode(userRecord.id, {
+    code,
+    discount: tier.discount,
+    tier: tier.threshold,
+    createdAt: new Date().toISOString()
+  });
+
+  res.json({ ok: true, code, discount: tier.discount });
+}));
+
+router.get('/orders', auth.requireUser, ah(async (req, res) => {
+  const orderList = req.user.role === 'admin'
+    ? await orders.getAllOrders()
+    : await orders.getOrdersForUser(req.user.id);
+  res.json({ ok: true, orders: orderList });
 }));
 
 router.post('/orders', auth.requireUser, ah(async (req, res) => {
@@ -679,17 +679,34 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Your bag is empty.' });
   }
 
-  const products = await store.read('products');
+  const address = String(payload.address || req.user.address || '').trim();
+  if (!address) {
+    return res.status(400).json({ ok: false, message: 'Please enter a delivery address.' });
+  }
+  if (!isDeliverableAddress(address)) {
+    return res.status(400).json({ ok: false, message: 'Sorry, we currently only deliver within Lebanon — please include "Lebanon" in your delivery address.' });
+  }
+
   const orderItems = [];
   let subtotal = 0;
 
+  /* Validate every item before committing any stock changes — otherwise a
+     later item failing validation would leave earlier items' stock already
+     decremented with no order actually created. */
   for (const item of items) {
     const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
-    const product = products.find((entry) => entry.id === Number(item.id));
+    const product = await products.getProductById(Number(item.id));
     const shade = String(item.shade || '').trim();
 
     if (!product) {
       return res.status(400).json({ ok: false, message: 'One of the items is no longer available.' });
+    }
+    /* Without this, an item added via a shortcut that skips the shade
+       picker (shop-grid "Add to bag", wishlist quick-add) would check out
+       with no shade specified, leaving fulfillment with no way to know
+       which one to send. */
+    if (Array.isArray(product.shades) && product.shades.length && !shade) {
+      return res.status(400).json({ ok: false, message: 'Please choose a shade for ' + product.name + ' before checking out.' });
     }
     if (product.soldOut || product.stock < quantity) {
       return res.status(400).json({
@@ -700,8 +717,6 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
       });
     }
 
-    product.stock -= quantity;
-    product.soldOut = product.stock <= 0;
     const unitPrice = (typeof product.salePrice === 'number' && product.salePrice > 0 && product.salePrice < product.price)
       ? product.salePrice
       : product.price;
@@ -709,24 +724,26 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     orderItems.push({ productId: product.id, name: product.name, quantity, price: unitPrice, shade });
   }
 
+  for (const item of orderItems) {
+    await products.adjustStock(item.productId, -item.quantity);
+  }
+
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
 
   let discount = 0;
-  let redeemedTier = null;
-  if (payload.redeemTier) {
-    const tier = rewards.TIERS.find((entry) => entry.threshold === Number(payload.redeemTier));
-    const points = Number(req.user.rewardPoints) || 0;
-    const alreadyRedeemed = (req.user.redeemedTiers || []).includes(Number(payload.redeemTier));
-    if (tier && !alreadyRedeemed && points >= tier.threshold) {
-      discount = Math.round(subtotal * (tier.discount / 100) * 100) / 100;
-      redeemedTier = tier.threshold;
+  let usedDiscountCode = null;
+  const requestedCode = payload.discountCode ? String(payload.discountCode).trim().toUpperCase() : '';
+  if (requestedCode) {
+    const codeEntry = (req.user.discountCodes || []).find((entry) => entry.code === requestedCode && !entry.usedAt);
+    if (codeEntry) {
+      discount = Math.round(subtotal * (codeEntry.discount / 100) * 100) / 100;
+      usedDiscountCode = codeEntry.code;
     }
   }
 
   const total = Math.round((subtotal - discount + shipping) * 100) / 100;
   const pointsEarned = Math.max(0, Math.floor(subtotal - discount));
   const paymentMethod = payload.paymentMethod === 'delivery' ? 'delivery' : 'online';
-  const address = String(payload.address || req.user.address || '').trim();
 
   const order = {
     id: Date.now(),
@@ -736,7 +753,7 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     items: orderItems,
     subtotal: Math.round(subtotal * 100) / 100,
     discount,
-    redeemedTier,
+    discountCode: usedDiscountCode,
     shipping,
     total,
     pointsEarned,
@@ -745,20 +762,26 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  await store.write('products', products);
-  const orders = await store.read('orders');
-  orders.push(order);
-  await store.write('orders', orders);
+  await orders.createOrder(order);
 
-  const users = await store.read('users');
-  const userRecord = users.find((entry) => entry.id === req.user.id);
+  const userRecord = req.user;
   if (userRecord) {
-    userRecord.rewardPoints = (Number(userRecord.rewardPoints) || 0) + pointsEarned;
-    if (redeemedTier) {
-      userRecord.redeemedTiers = Array.isArray(userRecord.redeemedTiers) ? userRecord.redeemedTiers : [];
-      if (!userRecord.redeemedTiers.includes(redeemedTier)) userRecord.redeemedTiers.push(redeemedTier);
+    /* Lifetime total never decreases (even when points are later spent on a
+       reward), so a redeemed tier can't retroactively re-lock a higher tier
+       the customer already qualified for. Seed it from the current balance
+       the first time this field is written for an older account. */
+    const priorLifetime = Number(userRecord.lifetimePoints) || Number(userRecord.rewardPoints) || 0;
+    /* Whatever address they just delivered to becomes their saved address,
+       so checkout stays pre-filled with wherever they actually asked us to
+       ship last time, not just whatever they set once in their profile. */
+    await users.updateUser(userRecord.id, {
+      rewardPoints: (Number(userRecord.rewardPoints) || 0) + pointsEarned,
+      lifetimePoints: priorLifetime + pointsEarned,
+      address
+    });
+    if (usedDiscountCode) {
+      await users.setDiscountCodeUsed(userRecord.id, usedDiscountCode, new Date().toISOString());
     }
-    await store.write('users', users);
   }
 
   const itemsSummary = orderItems
@@ -776,8 +799,7 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
 }));
 
 router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => {
-  const orders = await store.read('orders');
-  const order = orders.find((entry) => entry.id === Number(req.params.orderId));
+  const order = await orders.getOrderById(Number(req.params.orderId));
 
   if (!order) {
     return res.status(404).json({ ok: false, message: 'Order not found.' });
@@ -792,37 +814,44 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
     return res.status(400).json({ ok: false, message: 'Delivered orders can no longer be cancelled.' });
   }
 
+  await orders.cancelOrder(order.id);
   order.status = 'cancelled';
   order.cancelledAt = new Date().toISOString();
 
-  const products = await store.read('products');
-  (order.items || []).forEach((item) => {
-    const product = products.find((entry) => entry.id === item.productId || entry.name === item.name);
-    if (product) {
-      product.stock += item.quantity || 1;
-      product.soldOut = product.stock <= 0;
+  let allProducts = null;
+  for (const item of (order.items || [])) {
+    let productId = item.productId;
+    if (!productId) {
+      // Defensive fallback for legacy order items missing a productId — should
+      // never trigger now that order_items.product_id is populated at checkout.
+      allProducts = allProducts || (await products.getAllProducts());
+      const match = allProducts.find((entry) => entry.name === item.name);
+      productId = match ? match.id : null;
     }
-  });
-
-  await store.write('products', products);
-  await store.write('orders', orders);
+    if (productId) {
+      await products.adjustStock(productId, item.quantity || 1);
+    }
+  }
 
   // Refund isn't a real payment-gateway transaction here (no card was ever
   // actually charged), but the order's reward-program effects are real —
-  // reverse the points it earned, and give back any tier it redeemed so
-  // the customer isn't left worse off for a cancelled order.
-  if (order.pointsEarned || order.redeemedTier) {
-    const users = await store.read('users');
-    const userRecord = users.find((entry) => entry.id === order.userId);
+  // reverse the points it earned, and un-use any discount code it spent
+  // (the code itself was earned separately via redeeming a tier, so a
+  // cancelled order gives back the ability to use that code again rather
+  // than un-redeeming the tier).
+  if (order.userId && (order.pointsEarned || order.discountCode)) {
+    const userRecord = await users.getUserById(order.userId);
     if (userRecord) {
       if (order.pointsEarned) {
-        userRecord.rewardPoints = Math.max(0, (Number(userRecord.rewardPoints) || 0) - order.pointsEarned);
+        const priorLifetime = Number(userRecord.lifetimePoints) || Number(userRecord.rewardPoints) || 0;
+        await users.updateUser(userRecord.id, {
+          rewardPoints: Math.max(0, (Number(userRecord.rewardPoints) || 0) - order.pointsEarned),
+          lifetimePoints: Math.max(0, priorLifetime - order.pointsEarned)
+        });
       }
-      if (order.redeemedTier && Array.isArray(userRecord.redeemedTiers)) {
-        const tierIndex = userRecord.redeemedTiers.indexOf(order.redeemedTier);
-        if (tierIndex !== -1) userRecord.redeemedTiers.splice(tierIndex, 1);
+      if (order.discountCode) {
+        await users.setDiscountCodeUsed(userRecord.id, order.discountCode, null);
       }
-      await store.write('users', users);
     }
   }
 
@@ -837,14 +866,34 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
   res.json({ ok: true, order });
 }));
 
+/* "Deleting" an order only hides it from the customer's own history — the
+   record stays in the database so admin revenue/order stats stay accurate. */
+router.delete('/orders/:orderId', auth.requireUser, ah(async (req, res) => {
+  const order = await orders.getOrderById(Number(req.params.orderId));
+
+  if (!order) {
+    return res.status(404).json({ ok: false, message: 'Order not found.' });
+  }
+  if (order.userId !== req.user.id && req.user.role !== 'admin') {
+    return res.status(403).json({ ok: false, message: 'You are not authorized to remove this order.' });
+  }
+
+  await orders.hideOrder(order.id);
+  res.json({ ok: true });
+}));
+
+router.delete('/orders', auth.requireUser, ah(async (req, res) => {
+  await orders.hideAllOrdersForUser(req.user.id);
+  res.json({ ok: true });
+}));
+
 router.post('/orders/:orderId/status', auth.requireAdmin, ah(async (req, res) => {
   const status = String((req.body || {}).status || '');
   if (!ORDER_STATUSES.includes(status) || status === 'cancelled') {
     return res.status(400).json({ ok: false, message: 'Invalid order status.' });
   }
 
-  const orders = await store.read('orders');
-  const order = orders.find((entry) => entry.id === Number(req.params.orderId));
+  const order = await orders.getOrderById(Number(req.params.orderId));
   if (!order) {
     return res.status(404).json({ ok: false, message: 'Order not found.' });
   }
@@ -852,12 +901,12 @@ router.post('/orders/:orderId/status', auth.requireAdmin, ah(async (req, res) =>
     return res.status(400).json({ ok: false, message: 'Cancelled orders cannot change status.' });
   }
 
+  await orders.setStatus(order.id, status);
   order.status = status;
   order.updatedAt = new Date().toISOString();
-  await store.write('orders', orders);
 
   if (order.userEmail && status !== 'confirmed') {
-    const customer = (await store.read('users')).find((entry) => entry.id === order.userId);
+    const customer = order.userId ? await users.getUserById(order.userId) : null;
     await emailService.sendEmail('order_status', order.userEmail, {
       firstName: customer ? customer.name : 'there',
       orderNumber: order.id,
@@ -882,17 +931,14 @@ router.post('/contact', ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Please fill in your name, a valid email, and a message.' });
   }
 
-  const messages = await store.read('messages');
-  messages.push({
+  await messages.createMessage({
     id: Date.now(),
     name,
     email,
-    message: message.slice(0, 2000),
-    createdAt: new Date().toISOString()
+    message: message.slice(0, 2000)
   });
-  await store.write('messages', messages);
 
-  const admin = (await store.read('users')).find((account) => account.role === 'admin');
+  const admin = await users.getAdminUser();
   if (admin && admin.email) {
     await emailService.sendEmail('contact_message', admin.email, {
       firstName: admin.name,

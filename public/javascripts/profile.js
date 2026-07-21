@@ -38,6 +38,28 @@
     });
   });
 
+  /* Redeem a reward tier for a discount code */
+  var rewardsCard = B.$('#rewards-card');
+  if (rewardsCard) {
+    rewardsCard.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-redeem-tier]');
+      if (!btn) return;
+      var tier = btn.getAttribute('data-redeem-tier');
+      btn.disabled = true;
+      btn.textContent = 'Redeeming…';
+      B.api('/api/rewards/redeem', { method: 'POST', body: { tier: Number(tier) } })
+        .then(function (result) {
+          B.toast('Redeemed! Your code: ' + result.code);
+          window.location.reload();
+        })
+        .catch(function (err) {
+          B.toast(err.message, 'error');
+          btn.disabled = false;
+          btn.textContent = 'Redeem';
+        });
+    });
+  }
+
   /* Delete account */
   var deleteOpenBtn = B.$('#delete-account-open');
   var deleteForm = B.$('#delete-account-form');
@@ -109,7 +131,10 @@
           '<span><strong>' + B.money(order.total) + '</strong>' +
             (order.shipping === 0 ? ' <span class="text-muted" style="font-size:12px;">(free shipping)</span>' : '') +
             ' · <span class="text-muted" style="font-size:12.5px; text-transform:capitalize;">' + (order.paymentMethod || 'online') + '</span></span>' +
-          (canCancel ? '<button class="btn btn-danger btn-sm" data-cancel-order="' + order.id + '" type="button">Cancel order</button>' : '') +
+          '<span class="order-card-actions">' +
+            (canCancel ? '<button class="btn btn-danger btn-sm" data-cancel-order="' + order.id + '" type="button">Cancel order</button>' : '') +
+            '<button class="btn btn-soft btn-sm" data-delete-order="' + order.id + '" type="button">Delete</button>' +
+          '</span>' +
         '</div>' +
       '</div>';
   }
@@ -117,6 +142,8 @@
   var ORDERS_PAGE_SIZE = 3;
   var allOrders = [];
   var ordersExpanded = false;
+
+  var clearOrdersBtn = B.$('#orders-clear-all');
 
   function renderOrdersList() {
     var visible = ordersExpanded ? allOrders : allOrders.slice(0, ORDERS_PAGE_SIZE);
@@ -128,6 +155,7 @@
         '</button>';
     }
     ordersList.innerHTML = visible.map(orderHtml).join('') + toggleHtml;
+    if (clearOrdersBtn) clearOrdersBtn.style.display = allOrders.length ? '' : 'none';
   }
 
   function loadOrders() {
@@ -135,6 +163,7 @@
       allOrders = result.orders || [];
       if (!allOrders.length) {
         ordersList.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">' + window.BeautiqueIcons.bag + '</span><h3>No orders yet</h3><p>Treat yourself — you deserve it.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
+        if (clearOrdersBtn) clearOrdersBtn.style.display = 'none';
         return;
       }
       ordersExpanded = false;
@@ -152,20 +181,52 @@
       return;
     }
 
-    var btn = e.target.closest('[data-cancel-order]');
-    if (!btn) return;
-    var orderId = btn.getAttribute('data-cancel-order');
-    B.confirmDialog('Cancel this order?', 'Order #' + orderId + ' will be cancelled and refunded. Items go back in stock.')
-      .then(function (confirmed) {
-        if (!confirmed) return;
-        B.api('/api/orders/' + orderId + '/cancel', { method: 'POST' })
-          .then(function () {
-            B.toast('Order cancelled — confirmation email sent.');
-            loadOrders();
-          })
-          .catch(function (err) { B.toast(err.message, 'error'); });
-      });
+    var cancelBtn = e.target.closest('[data-cancel-order]');
+    if (cancelBtn) {
+      var cancelId = cancelBtn.getAttribute('data-cancel-order');
+      B.confirmDialog('Cancel this order?', 'Order #' + cancelId + ' will be cancelled and refunded. Items go back in stock.')
+        .then(function (confirmed) {
+          if (!confirmed) return;
+          B.api('/api/orders/' + cancelId + '/cancel', { method: 'POST' })
+            .then(function () {
+              B.toast('Order cancelled — confirmation email sent.');
+              loadOrders();
+            })
+            .catch(function (err) { B.toast(err.message, 'error'); });
+        });
+      return;
+    }
+
+    var deleteBtn = e.target.closest('[data-delete-order]');
+    if (deleteBtn) {
+      var deleteId = deleteBtn.getAttribute('data-delete-order');
+      B.confirmDialog('Remove this order?', 'Order #' + deleteId + ' will be removed from your order history here. This won\'t affect your account or any refund already given.')
+        .then(function (confirmed) {
+          if (!confirmed) return;
+          B.api('/api/orders/' + deleteId, { method: 'DELETE' })
+            .then(function () {
+              B.toast('Order removed from your history.');
+              loadOrders();
+            })
+            .catch(function (err) { B.toast(err.message, 'error'); });
+        });
+    }
   });
+
+  if (clearOrdersBtn) {
+    clearOrdersBtn.addEventListener('click', function () {
+      B.confirmDialog('Clear your entire order history?', 'All orders will be removed from this list. This won\'t affect your account or any refunds already given.')
+        .then(function (confirmed) {
+          if (!confirmed) return;
+          B.api('/api/orders', { method: 'DELETE' })
+            .then(function () {
+              B.toast('Order history cleared.');
+              loadOrders();
+            })
+            .catch(function (err) { B.toast(err.message, 'error'); });
+        });
+    });
+  }
 
   loadOrders();
 

@@ -435,7 +435,8 @@
       emoji: wishBtn.getAttribute('data-emoji'),
       tone: Number(wishBtn.getAttribute('data-tone')),
       image: wishBtn.getAttribute('data-image') || '',
-      stock: Number(wishBtn.getAttribute('data-stock')) || 99
+      stock: Number(wishBtn.getAttribute('data-stock')) || 99,
+      hasShades: wishBtn.getAttribute('data-has-shades') === '1'
     });
     wishBtn.classList.remove('is-popping');
     void wishBtn.offsetWidth;
@@ -476,6 +477,11 @@
       var status = $('#deliver-status');
       if (!address) {
         status.textContent = 'Please enter or pick an address first.';
+        status.className = 'form-status is-error';
+        return;
+      }
+      if (!/lebanon|liban/i.test(address)) {
+        status.textContent = 'Sorry, we currently only deliver within Lebanon — please include "Lebanon" in your address.';
         status.className = 'form-status is-error';
         return;
       }

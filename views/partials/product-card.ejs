@@ -8,6 +8,7 @@
           data-tone="<%= product.tone %>"
           data-image="<%= (product.images && product.images[0]) || '' %>"
           data-stock="<%= product.stock %>"
+          data-has-shades="<%= product.shades && product.shades.length ? '1' : '' %>"
           aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
   <a href="/product/<%= product.id %>" class="product-art" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
     <% if (product.images && product.images.length) { %>
@@ -35,7 +36,11 @@
           <span class="price"><%= money(product.price) %></span>
         <% } %>
       </span>
-      <% if (product.available) { %>
+      <% if (!product.available) { %>
+        <span class="stock-pill stock-out">Sold out</span>
+      <% } else if (product.shades && product.shades.length) { %>
+        <a class="btn btn-soft btn-sm" href="/product/<%= product.id %>">Choose a shade</a>
+      <% } else { %>
         <button class="btn btn-primary btn-sm add-to-cart" type="button"
                 data-id="<%= product.id %>"
                 data-name="<%= product.name %>"
@@ -43,8 +48,6 @@
                 data-emoji="<%= product.emoji %>"
                 data-tone="<%= product.tone %>"
                 data-stock="<%= product.stock %>">Add to bag</button>
-      <% } else { %>
-        <span class="stock-pill stock-out">Sold out</span>
       <% } %>
     </div>
   </div>

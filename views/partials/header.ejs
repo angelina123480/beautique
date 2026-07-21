@@ -83,13 +83,13 @@
     <div class="modal-head">
       <div>
         <h3>Delivery location</h3>
-        <p class="text-muted" style="margin:4px 0 0; font-size:14px;">Type your address or pick a point on the map.</p>
+        <p class="text-muted" style="margin:4px 0 0; font-size:14px;">Type your address or pick a point on the map. We currently deliver within Lebanon only.</p>
       </div>
       <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
     </div>
     <div class="field">
       <label for="deliver-input">Address</label>
-      <input class="input" id="deliver-input" type="text" placeholder="Street, city, country"
+      <input class="input" id="deliver-input" type="text" placeholder="Street, city, Lebanon"
              value="<%= user && user.address ? user.address : '' %>">
     </div>
     <div class="map-layout">

@@ -23,7 +23,9 @@
           '<h3><a href="/product/' + item.id + '">' + name + '</a></h3>' +
           '<div class="product-card-foot">' +
             '<span class="price">' + B.money(item.price) + '</span>' +
-            '<button class="btn btn-primary btn-sm add-to-cart" type="button" data-id="' + item.id + '" data-name="' + name + '" data-price="' + item.price + '" data-emoji="' + B.escapeHtml(item.emoji || '') + '" data-tone="' + tone + '" data-stock="' + stock + '">Add to bag</button>' +
+            (item.hasShades
+              ? '<a class="btn btn-soft btn-sm" href="/product/' + item.id + '">Choose a shade</a>'
+              : '<button class="btn btn-primary btn-sm add-to-cart" type="button" data-id="' + item.id + '" data-name="' + name + '" data-price="' + item.price + '" data-emoji="' + B.escapeHtml(item.emoji || '') + '" data-tone="' + tone + '" data-stock="' + stock + '">Add to bag</button>') +
           '</div>' +
         '</div>' +
       '</article>';

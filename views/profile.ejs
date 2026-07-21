@@ -72,15 +72,27 @@
 
       <div class="card" id="rewards-card">
         <h3 style="font-size: 22px;">Rewards</h3>
-        <p class="text-muted" style="font-size: 13.5px;">Earn 1 point for every $1 you spend. Unlock a tier and redeem it for a discount at checkout.</p>
+        <p class="text-muted" style="font-size: 13.5px;">Earn 1 point for every $1 you spend. Redeem an unlocked tier for a discount code you can use at checkout whenever you like.</p>
         <div class="rewards-points"><strong><%= user.rewardPoints %></strong> <span class="text-muted">points</span></div>
         <div class="rewards-tiers">
           <% rewardTiers.forEach(function(tier) { %>
             <% var redeemed = user.redeemedTiers.indexOf(tier.threshold) !== -1; %>
-            <% var unlocked = user.rewardPoints >= tier.threshold; %>
+            <% var unlocked = user.lifetimePoints >= tier.threshold; %>
+            <% var codeEntry = user.discountCodes.find(function(c) { return c.tier === tier.threshold; }); %>
             <div class="rewards-tier <%= redeemed ? 'is-redeemed' : (unlocked ? 'is-unlocked' : 'is-locked') %>">
-              <div><strong><%= tier.threshold %> pts</strong> <span class="text-muted">— <%= tier.discount %>% off</span></div>
-              <span class="badge <%= unlocked && !redeemed ? 'badge-gold' : '' %>"><%= redeemed ? 'Redeemed' : (unlocked ? 'Ready to redeem' : 'Locked') %></span>
+              <div>
+                <strong><%= tier.threshold %> pts</strong> <span class="text-muted">— <%= tier.discount %>% off</span>
+                <% if (codeEntry) { %>
+                  <div class="text-muted" style="font-size: 12px; margin-top: 2px;">Code: <strong><%= codeEntry.code %></strong> <%= codeEntry.usedAt ? '(used)' : '— apply it at checkout' %></div>
+                <% } %>
+              </div>
+              <% if (redeemed) { %>
+                <span class="badge">Redeemed</span>
+              <% } else if (unlocked) { %>
+                <button type="button" class="btn btn-primary btn-sm" data-redeem-tier="<%= tier.threshold %>">Redeem</button>
+              <% } else { %>
+                <span class="badge">Locked</span>
+              <% } %>
             </div>
           <% }); %>
         </div>
@@ -88,8 +100,11 @@
       </div>
 
       <div class="card">
-        <h3 style="font-size: 22px;">Your orders</h3>
-        <div id="orders-list"><p class="text-muted">Loading your orders…</p></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <h3 style="font-size: 22px; margin: 0;">Your orders</h3>
+          <button type="button" id="orders-clear-all" class="text-muted" style="display:none; background:none; border:none; font-size:13px; text-decoration:underline; cursor:pointer; padding:0;">Clear all history</button>
+        </div>
+        <div id="orders-list" style="margin-top:12px;"><p class="text-muted">Loading your orders…</p></div>
       </div>
     </div>
 

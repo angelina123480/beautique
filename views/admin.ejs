@@ -81,9 +81,7 @@
                   <td><input class="input input-sm" type="number" min="0" step="0.01" name="price" value="<%= product.price %>"></td>
                   <td><input class="input input-sm" type="number" min="0" name="stock" value="<%= product.stock %>"></td>
                   <td>
-                    <label style="font-size: 13px; display:flex; align-items:center; gap:6px; cursor:pointer;">
-                      <input type="checkbox" name="soldOut" <%= product.soldOut ? 'checked' : '' %>> Sold out
-                    </label>
+                    <span class="badge" style="<%= product.soldOut ? '' : 'opacity:.6;' %>"><%= product.soldOut ? 'Sold out' : 'In stock' %></span>
                   </td>
                   <td>
                     <% if (product.reviewCount) { %>

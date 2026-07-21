@@ -1123,6 +1123,36 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
   box-shadow: var(--shadow-sm);
 }
 
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+}
+.btn-google:hover { background: var(--surface-soft); color: var(--ink); }
+.btn-google svg { flex-shrink: 0; width: 18px; height: 18px; }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 /* --------------------------------------------------------------------------
    Cart drawer
    -------------------------------------------------------------------------- */
@@ -1590,6 +1620,7 @@ img[src$="dawn-blush-peony.jpg"] {
   flex-wrap: wrap;
   margin-top: 10px;
 }
+.order-card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .stat-grid {
   display: grid;
@@ -2125,8 +2156,6 @@ img[src$="dawn-blush-peony.jpg"] {
   flex-shrink: 0;
 }
 .matcher-result-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-
-.matcher-consent { margin-bottom: 4px; }
 
 .matcher-season-picker { display: flex; gap: 8px; margin-bottom: 12px; }
 .matcher-season-btn {

@@ -10,6 +10,7 @@
   var placeBtn = B.$('#place-order');
   var statusBox = B.$('#checkout-status');
   var signedIn = document.body.getAttribute('data-signed-in') === '1';
+  var appliedCode = null; // { code, discount } once a valid code has been applied
 
   function render() {
     var cart = B.cart.get();
@@ -46,18 +47,50 @@
 
     var subtotal = B.cart.subtotal(cart);
     var shipping = subtotal >= B.cart.FREE_SHIPPING ? 0 : B.cart.SHIPPING_FLAT;
-    var rewardBox = B.$('#apply-reward');
-    var discount = (rewardBox && rewardBox.checked) ? Math.round(subtotal * (Number(rewardBox.getAttribute('data-discount')) / 100) * 100) / 100 : 0;
+    var discount = appliedCode ? Math.round(subtotal * (appliedCode.discount / 100) * 100) / 100 : 0;
 
     summaryBox.innerHTML = '' +
       '<div class="cart-totals-row"><span>Subtotal (' + B.cart.count(cart) + ' items)</span><span>' + B.money(subtotal) + '</span></div>' +
-      (discount > 0 ? '<div class="cart-totals-row" style="color: var(--success);"><span>Reward discount</span><span>−' + B.money(discount) + '</span></div>' : '') +
+      (discount > 0 ? '<div class="cart-totals-row" style="color: var(--success);"><span>Discount (' + B.escapeHtml(appliedCode.code) + ')</span><span>−' + B.money(discount) + '</span></div>' : '') +
       '<div class="cart-totals-row"><span>Shipping</span><span>' + (shipping === 0 ? 'Free' : B.money(shipping)) + '</span></div>' +
       '<div class="cart-totals-row grand"><span>Total</span><span>' + B.money(subtotal - discount + shipping) + '</span></div>';
   }
 
-  var rewardToggle = B.$('#apply-reward');
-  if (rewardToggle) rewardToggle.addEventListener('change', render);
+  /* ---------------- Discount code ---------------- */
+
+  var codeInput = B.$('#discount-code-input');
+  var codeApplyBtn = B.$('#discount-code-apply');
+  var codeStatus = B.$('#discount-code-status');
+  var codeChips = B.$('#discount-code-chips');
+
+  if (codeChips) {
+    codeChips.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-fill-code]');
+      if (!chip || !codeInput) return;
+      codeInput.value = chip.getAttribute('data-fill-code');
+    });
+  }
+
+  if (codeApplyBtn) {
+    codeApplyBtn.addEventListener('click', function () {
+      var entered = (codeInput.value || '').trim().toUpperCase();
+      var match = (window.CHECKOUT_DISCOUNT_CODES || []).find(function (c) { return c.code === entered; });
+      if (!entered) {
+        appliedCode = null;
+        codeStatus.textContent = '';
+        codeStatus.className = 'form-status';
+      } else if (!match) {
+        appliedCode = null;
+        codeStatus.textContent = 'That code isn’t valid, or has already been used.';
+        codeStatus.className = 'form-status is-error';
+      } else {
+        appliedCode = match;
+        codeStatus.textContent = 'Applied — ' + match.discount + '% off this order.';
+        codeStatus.className = 'form-status is-success';
+      }
+      render();
+    });
+  }
 
   /* Re-render after any cart mutation triggered by the shared steppers. */
   document.addEventListener('click', function (e) {
@@ -85,10 +118,13 @@
       statusBox.className = 'form-status is-error';
       return;
     }
+    if (!/lebanon|liban/i.test(address)) {
+      statusBox.textContent = 'Sorry, we currently only deliver within Lebanon — please include "Lebanon" in your delivery address.';
+      statusBox.className = 'form-status is-error';
+      return;
+    }
 
     var paymentMethod = (B.$('.pay-option input:checked') || {}).value || 'online';
-    var rewardBox = B.$('#apply-reward');
-    var redeemTier = (rewardBox && rewardBox.checked) ? Number(rewardBox.getAttribute('data-tier')) : null;
 
     placeBtn.disabled = true;
     placeBtn.textContent = 'Placing order…';
@@ -101,7 +137,7 @@
         items: cart.map(function (item) { return { id: item.id, quantity: item.quantity, shade: item.shade || '' }; }),
         paymentMethod: paymentMethod,
         address: address,
-        redeemTier: redeemTier
+        discountCode: appliedCode ? appliedCode.code : null
       }
     }).then(function (result) {
       B.cart.clear();

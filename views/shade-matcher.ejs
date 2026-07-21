@@ -50,15 +50,13 @@
           <button type="button" class="btn btn-primary btn-block" id="matcher-webcam-capture" style="display:none; margin-top:10px;">Capture photo</button>
         </div>
 
-        <label class="filter-check matcher-consent">
-          <input type="checkbox" id="matcher-remember-consent">
-          Remember this photo on this device as my…
-        </label>
+        <p class="text-muted" style="font-size: 13px; margin-bottom: 8px;">Save this photo on this device as your…</p>
         <div class="matcher-season-picker" id="matcher-season-picker">
           <button type="button" class="matcher-season-btn is-active" data-season="summer">☀️ Summer shade</button>
           <button type="button" class="matcher-season-btn" data-season="winter">❄️ Winter shade</button>
         </div>
-        <p class="text-muted" style="font-size: 12px; margin: 4px 0 14px;">Stored only in your browser's local storage — never uploaded or sent to our servers. View or forget either one anytime from your profile.</p>
+        <button type="button" class="btn btn-soft btn-block" id="matcher-save-btn" disabled style="margin-top:10px;">Save this photo</button>
+        <p class="text-muted" style="font-size: 12px; margin: 8px 0 14px;">Stored only in your browser's local storage — never uploaded or sent to our servers. View or forget either one anytime from your profile.</p>
 
         <div class="matcher-frame" id="matcher-frame">
           <video id="matcher-video" playsinline muted style="display:none;"></video>

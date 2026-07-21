@@ -8,10 +8,11 @@
     "otp": "",
     "otpVerified": true,
     "phone": "",
-    "address": "",
+    "address": "Test, Beirut, Lebanon",
     "resetOtp": "",
     "resetOtpExpires": "",
-    "rewardPoints": 24
+    "rewardPoints": 24,
+    "lifetimePoints": 24
   },
   {
     "id": 1784203304015,
@@ -60,9 +61,26 @@
     "role": "client",
     "phone": "",
     "address": "",
-    "otp": "129126",
+    "otp": "849992",
     "otpVerified": false,
     "createdAt": "2026-07-17T08:48:47.799Z",
-    "otpExpires": "2026-07-17T08:58:47.799Z"
+    "otpExpires": "2026-07-21T11:08:05.987Z"
+  },
+  {
+    "id": 1784634783020,
+    "name": "Angelina Abi Nader",
+    "email": "angelina.abinader@gmail.com",
+    "password": null,
+    "role": "client",
+    "phone": "",
+    "address": "Corniche Pierre Gemayel, Corniche Al Naher, Achrafieh, Beirut Governorate, 1203, Lebanon",
+    "otp": "",
+    "otpVerified": true,
+    "googleId": "103679634013665305695",
+    "createdAt": "2026-07-21T11:53:03.020Z",
+    "rewardPoints": 0,
+    "redeemedTiers": [],
+    "discountCodes": [],
+    "lifetimePoints": 0
   }
 ]

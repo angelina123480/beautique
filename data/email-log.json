@@ -321,5 +321,212 @@
     "variant": "modern",
     "delivered": true,
     "createdAt": "2026-07-21T07:05:06.202Z"
+  },
+  {
+    "id": 1784631116603,
+    "type": "order_confirmation",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Order 1784631116586 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:51:56.603Z"
+  },
+  {
+    "id": 1784631125493,
+    "type": "order_confirmation",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Order 1784631125478 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:52:05.493Z"
+  },
+  {
+    "id": 1784631125957,
+    "type": "follow_up",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:52:05.957Z"
+  },
+  {
+    "id": 1784631170873,
+    "type": "order_cancellation",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Order 1784631116586 has been cancelled",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:52:50.873Z"
+  },
+  {
+    "id": 1784631184700,
+    "type": "order_confirmation",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Order 1784631184685 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:53:04.700Z"
+  },
+  {
+    "id": 1784631185002,
+    "type": "follow_up",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:53:05.002Z"
+  },
+  {
+    "id": 1784631474664,
+    "type": "otp",
+    "to": "angelina.abinader@net.usj.edu.lb",
+    "subject": "Your Beautique verification code",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:57:54.664Z"
+  },
+  {
+    "id": 1784631485995,
+    "type": "otp",
+    "to": "angelina.abinader@net.usj.edu.lb",
+    "subject": "Your Beautique verification code",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T10:58:05.995Z"
+  },
+  {
+    "id": 1784632151104,
+    "type": "order_confirmation",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Order 1784632151084 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:09:11.104Z"
+  },
+  {
+    "id": 1784632151708,
+    "type": "follow_up",
+    "to": "gilbert.b.bakhos@gmail.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:09:11.708Z"
+  },
+  {
+    "id": 1784634888044,
+    "type": "order_confirmation",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Order 1784634888026 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:54:48.044Z"
+  },
+  {
+    "id": 1784634889102,
+    "type": "order_confirmation",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Order 1784634889085 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:54:49.103Z"
+  },
+  {
+    "id": 1784634958031,
+    "type": "order_confirmation",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Order 1784634958002 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:55:58.031Z"
+  },
+  {
+    "id": 1784634958760,
+    "type": "follow_up",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T11:55:58.760Z"
+  },
+  {
+    "id": 1784635738079,
+    "type": "order_confirmation",
+    "to": "qa-test-1784635708462@example.com",
+    "subject": "Order 1784635738061 is confirmed",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:08:58.079Z"
+  },
+  {
+    "id": 1784635738627,
+    "type": "follow_up",
+    "to": "qa-test-1784635708462@example.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:08:58.627Z"
+  },
+  {
+    "id": 1784635760230,
+    "type": "order_cancellation",
+    "to": "qa-test-1784635708462@example.com",
+    "subject": "Order 1784635738061 has been cancelled",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:09:20.230Z"
+  },
+  {
+    "id": 1784635888285,
+    "type": "order_confirmation",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Order 1784635888258 is confirmed",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:11:28.285Z"
+  },
+  {
+    "id": 1784635888703,
+    "type": "follow_up",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:11:28.703Z"
+  },
+  {
+    "id": 1784635915479,
+    "type": "order_cancellation",
+    "to": "angelina.abinader@gmail.com",
+    "subject": "Order 1784635888258 has been cancelled",
+    "variant": "friendly",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:11:55.479Z"
+  },
+  {
+    "id": 1784637120284,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784637120269 is confirmed",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:32:00.284Z"
+  },
+  {
+    "id": 1784637121005,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:32:01.005Z"
+  },
+  {
+    "id": 1784637128763,
+    "type": "order_cancellation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784637120269 has been cancelled",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T12:32:08.763Z"
   }
 ]

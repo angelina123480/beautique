@@ -1,10 +1,14 @@
 'use strict';
 
+const crypto = require('crypto');
 const express = require('express');
-const store = require('../lib/store');
 const catalog = require('../lib/catalog');
+const categories = require('../lib/categories');
+const messages = require('../lib/messages');
+const users = require('../lib/users');
+const orders = require('../lib/orders');
 const emailService = require('../lib/emailService');
-const rewards = require('../lib/rewards');
+const auth = require('../lib/auth');
 
 const router = express.Router();
 
@@ -32,7 +36,7 @@ router.get('/', ah(async (req, res) => {
     .filter((product) => product.onSale && product.available)
     .sort((a, b) => b.discountPercent - a.discountPercent)
     .slice(0, 8);
-  const categories = (await store.read('categories')).map((category) => Object.assign({}, category, {
+  const categoryList = (await categories.getCategories()).map((category) => Object.assign({}, category, {
     count: products.filter((product) => product.category === category.id).length
   }));
 
@@ -48,7 +52,7 @@ router.get('/', ah(async (req, res) => {
 
   let recommended = [];
   if (req.user) {
-    const myOrders = (await store.read('orders')).filter((order) => order.userId === req.user.id && order.status !== 'cancelled');
+    const myOrders = await orders.getActiveOrdersForUser(req.user.id);
     const purchasedIds = new Set();
     const purchasedCategories = new Set();
     myOrders.forEach((order) => {
@@ -80,7 +84,7 @@ router.get('/', ah(async (req, res) => {
     bestsellers,
     sale,
     recommended,
-    categories,
+    categories: categoryList,
     testimonials: testimonials.slice(0, 3)
   });
 }));
@@ -93,7 +97,7 @@ const PRICE_RANGES = {
 };
 
 router.get('/shop', ah(async (req, res) => {
-  const allCategories = await store.read('categories');
+  const allCategories = await categories.getCategories();
   const searchTerm = String(req.query.search || '').trim();
   const category = allCategories.some((entry) => entry.id === req.query.category) ? req.query.category : '';
   const sort = SORTS[req.query.sort] ? req.query.sort : 'featured';
@@ -249,9 +253,103 @@ router.get('/auth', (req, res) => {
   res.render('auth', {
     page: 'Account',
     menuId: 'auth',
-    devMail: !emailService.isConfigured()
+    devMail: !emailService.isConfigured(),
+    googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    googleError: req.query.googleError ? String(req.query.googleError) : ''
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Google sign-in — plain OAuth 2.0 "authorization code" flow, no
+ * Passport/express-session dependency, so it plugs into the app's
+ * existing lightweight session system (lib/auth.js) the same way the
+ * OTP-based sign-in does.
+ * ------------------------------------------------------------------ */
+
+const GOOGLE_STATE_COOKIE = 'googleOauthState';
+
+function googleRedirectUri(req) {
+  return req.protocol + '://' + req.get('host') + '/auth/google/callback';
+}
+
+router.get('/auth/google', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.redirect('/auth?googleError=' + encodeURIComponent('Google sign-in is not configured yet.'));
+  }
+
+  const state = crypto.randomBytes(16).toString('hex');
+  res.cookie(GOOGLE_STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirectUri(req),
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    prompt: 'select_account'
+  });
+  res.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params.toString());
+});
+
+router.get('/auth/google/callback', ah(async (req, res) => {
+  const expectedState = req.cookies[GOOGLE_STATE_COOKIE];
+  res.clearCookie(GOOGLE_STATE_COOKIE);
+
+  function failure(message) {
+    return res.redirect('/auth?googleError=' + encodeURIComponent(message));
+  }
+
+  if (req.query.error) {
+    return failure('Google sign-in was cancelled.');
+  }
+  if (!req.query.state || !expectedState || req.query.state !== expectedState) {
+    return failure('Your sign-in session expired — please try again.');
+  }
+  if (!req.query.code) {
+    return failure('Google sign-in failed — please try again.');
+  }
+
+  let tokens;
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: String(req.query.code),
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: 'authorization_code'
+      })
+    });
+    tokens = await tokenRes.json();
+    if (!tokenRes.ok || !tokens.access_token) {
+      throw new Error(tokens.error_description || 'Token exchange failed');
+    }
+  } catch (err) {
+    return failure('Could not complete Google sign-in. Please try again.');
+  }
+
+  let profile;
+  try {
+    const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + tokens.access_token }
+    });
+    profile = await profileRes.json();
+    if (!profile.email) throw new Error('No email in Google profile');
+  } catch (err) {
+    return failure('Could not read your Google account details.');
+  }
+
+  const user = await auth.findOrCreateGoogleUser({
+    email: profile.email,
+    name: profile.name || profile.given_name || 'Customer',
+    googleId: profile.sub
+  });
+
+  await auth.createSession(res, user.id);
+  res.redirect(user.role === 'admin' ? '/admin' : '/profile');
+}));
 
 router.get('/profile', (req, res) => {
   if (!req.user) {
@@ -261,8 +359,8 @@ router.get('/profile', (req, res) => {
 });
 
 router.get('/checkout', (req, res) => {
-  const reward = req.user ? rewards.availableTier(req.user) : null;
-  res.render('checkout', { page: 'Checkout', menuId: 'checkout', reward });
+  const unusedCodes = req.user ? (req.user.discountCodes || []).filter((entry) => !entry.usedAt) : [];
+  res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes });
 });
 
 router.get('/admin', ah(async (req, res) => {
@@ -271,17 +369,17 @@ router.get('/admin', ah(async (req, res) => {
   }
 
   const products = await catalog.getProducts();
-  const orders = (await store.read('orders')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const messages = (await store.read('messages')).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const users = await store.read('users');
-  const categories = (await store.read('categories')).map((category) => Object.assign({}, category, {
+  const orderList = await orders.getAllOrders();
+  const messageList = (await messages.getMessages()).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const allUsers = await users.getAllUsers();
+  const categoryList = (await categories.getCategories()).map((category) => Object.assign({}, category, {
     productCount: products.filter((product) => product.category === category.id).length
   }));
 
-  const adminIds = new Set(users.filter((user) => user.role === 'admin').map((user) => user.id));
+  const adminIds = new Set(allUsers.filter((user) => user.role === 'admin').map((user) => user.id));
   /* Admins can shop too, but their own test/personal orders shouldn't
      skew the store's real revenue/order stats. */
-  const customerOrders = orders.filter((order) => !adminIds.has(order.userId));
+  const customerOrders = orderList.filter((order) => !adminIds.has(order.userId));
   const activeCustomerOrders = customerOrders.filter((order) => order.status !== 'cancelled');
   const reviews = [];
   products.forEach((product) => {
@@ -297,7 +395,7 @@ router.get('/admin', ah(async (req, res) => {
     pending: customerOrders.filter((order) => order.status === 'confirmed').length,
     products: products.length,
     lowStock: products.filter((product) => !product.soldOut && product.stock > 0 && product.stock <= 5).length,
-    customers: users.filter((user) => user.role !== 'admin').length,
+    customers: allUsers.filter((user) => user.role !== 'admin').length,
     reviews: reviews.length
   };
 
@@ -305,10 +403,10 @@ router.get('/admin', ah(async (req, res) => {
     page: 'Admin dashboard',
     menuId: 'admin',
     products,
-    orders,
+    orders: orderList,
     reviews,
-    messages,
-    categories,
+    messages: messageList,
+    categories: categoryList,
     stats
   });
 }));

@@ -23,8 +23,9 @@
           <h3 style="font-size: 22px;">Delivery</h3>
           <div class="field">
             <label for="checkout-address">Delivery address</label>
-            <input id="checkout-address" type="text" placeholder="Street, city, country"
+            <input id="checkout-address" type="text" placeholder="Street, city, Lebanon"
                    value="<%= user && user.address ? user.address : '' %>">
+            <p class="text-muted" style="font-size: 12px; margin-top: 6px;">We currently deliver within Lebanon only.</p>
           </div>
 
           <h3 style="font-size: 22px; margin-top: 26px;">Payment</h3>
@@ -47,11 +48,22 @@
         <div class="card" id="checkout-summary-card">
           <h3 style="font-size: 22px;">Summary</h3>
           <div id="checkout-summary"></div>
-          <% if (reward) { %>
-            <label class="reward-toggle">
-              <input type="checkbox" id="apply-reward" data-tier="<%= reward.threshold %>" data-discount="<%= reward.discount %>">
-              <span>Apply my reward — <strong><%= reward.discount %>% off</strong> <span class="text-muted">(<%= reward.threshold %>-point tier)</span></span>
-            </label>
+          <% if (user) { %>
+            <div class="reward-toggle" style="display:block;">
+              <strong style="display:block; margin-bottom:8px; font-size:13.5px;">Have a discount code?</strong>
+              <% if (unusedCodes.length) { %>
+                <div id="discount-code-chips" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                  <% unusedCodes.forEach(function(c) { %>
+                    <button type="button" class="chip" data-fill-code="<%= c.code %>"><%= c.code %> · -<%= c.discount %>%</button>
+                  <% }); %>
+                </div>
+              <% } %>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="discount-code-input" placeholder="Enter code" style="flex:1; padding:10px 14px; border-radius:999px; border:1.5px solid var(--border); font: inherit;">
+                <button type="button" class="btn btn-soft btn-sm" id="discount-code-apply">Apply</button>
+              </div>
+              <div class="form-status" id="discount-code-status" style="margin-top:6px;"></div>
+            </div>
           <% } %>
           <% if (!user) { %>
             <div class="notice" style="margin-bottom: 14px;">
@@ -66,6 +78,13 @@
       </div>
     </div>
   </section>
+
+  <script>
+    /* Unused discount codes for this signed-in user, so checkout.js can
+       validate and preview the discount client-side without a round trip.
+       The server re-validates independently when the order is placed. */
+    window.CHECKOUT_DISCOUNT_CODES = <%- JSON.stringify(unusedCodes) %>;
+  </script>
 
   <%- include('partials/footer', { pageScript: 'checkout' }) %>
 </body>
