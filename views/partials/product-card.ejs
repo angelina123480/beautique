@@ -1,10 +1,21 @@
 <article class="product-card reveal">
   <% if (product.badge) { %><span class="badge"><%= product.badge %></span><% } %>
+  <button type="button" class="wishlist-btn"
+          data-id="<%= product.id %>"
+          data-name="<%= product.name %>"
+          data-price="<%= product.effectivePrice %>"
+          data-emoji="<%= product.emoji %>"
+          data-tone="<%= product.tone %>"
+          data-image="<%= (product.images && product.images[0]) || '' %>"
+          data-stock="<%= product.stock %>"
+          aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
   <a href="/product/<%= product.id %>" class="product-art" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
     <% if (product.images && product.images.length) { %>
       <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
-    <% } else { %>
+    <% } else if (product.emoji) { %>
       <span class="art-emoji"><%= product.emoji %></span>
+    <% } else { %>
+      <span class="art-emoji"><%- icon('bottle') %></span>
     <% } %>
   </a>
   <div class="product-card-body">
@@ -15,12 +26,20 @@
     <% } %>
     <p class="product-desc"><%= product.description %></p>
     <div class="product-card-foot">
-      <span class="price"><%= money(product.price) %></span>
+      <span class="price-group">
+        <% if (product.onSale) { %>
+          <span class="price-original"><%= money(product.price) %></span>
+          <span class="price price-sale"><%= money(product.salePrice) %></span>
+          <span class="badge-sale">-<%= product.discountPercent %>%</span>
+        <% } else { %>
+          <span class="price"><%= money(product.price) %></span>
+        <% } %>
+      </span>
       <% if (product.available) { %>
         <button class="btn btn-primary btn-sm add-to-cart" type="button"
                 data-id="<%= product.id %>"
                 data-name="<%= product.name %>"
-                data-price="<%= product.price %>"
+                data-price="<%= product.effectivePrice %>"
                 data-emoji="<%= product.emoji %>"
                 data-tone="<%= product.tone %>"
                 data-stock="<%= product.stock %>">Add to bag</button>

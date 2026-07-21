@@ -58,7 +58,7 @@
     B.$('#otp-email-label').textContent = email;
     var devNote = B.$('#dev-otp-note');
     if (devOtp) {
-      devNote.textContent = '🛠️ Dev mode — your verification code is: ' + devOtp;
+      devNote.textContent = 'Dev mode — your verification code is: ' + devOtp;
       devNote.style.display = '';
     } else {
       devNote.style.display = 'none';
@@ -132,7 +132,7 @@
         forgotResetFields.style.display = '';
         var devNote = B.$('#forgot-dev-otp-note');
         if (response.devOtp) {
-          devNote.textContent = '🛠️ Dev mode — your reset code is: ' + response.devOtp;
+          devNote.textContent = 'Dev mode — your reset code is: ' + response.devOtp;
           devNote.style.display = '';
         } else {
           devNote.style.display = 'none';
@@ -269,7 +269,7 @@
       .then(function (response) {
         var devNote = B.$('#dev-otp-note');
         if (response.devOtp) {
-          devNote.textContent = '🛠️ Dev mode — your verification code is: ' + response.devOtp;
+          devNote.textContent = 'Dev mode — your verification code is: ' + response.devOtp;
           devNote.style.display = '';
         }
         setStatus('A new code has been sent.', 'success');

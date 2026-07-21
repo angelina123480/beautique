@@ -8,13 +8,14 @@
 
   <div class="container page-head">
     <span class="eyebrow">My account</span>
-    <h1>Hello, <%= user.name.split(' ')[0] %> 👋</h1>
+    <h1>Hello, <%= user.name.split(' ')[0] %></h1>
     <p class="lead">Manage your details and keep an eye on your orders.</p>
   </div>
 
   <section class="container" style="padding-bottom: 60px;">
     <div class="grid grid-2" style="align-items: start;">
-      <div class="card">
+      <div>
+      <div class="card" style="margin-bottom: 20px;">
         <h3 style="font-size: 22px;">Your information</h3>
         <form id="profile-form">
           <div class="field">
@@ -57,7 +58,7 @@
               <label for="delete-account-password">Confirm your password to continue</label>
               <div class="password-field">
                 <input id="delete-account-password" type="password" placeholder="••••••••" autocomplete="current-password">
-                <button type="button" class="password-toggle" data-target="delete-account-password" aria-label="Show password">👁️</button>
+                <button type="button" class="password-toggle" data-target="delete-account-password" aria-label="Show password"><%- icon('eye') %></button>
               </div>
             </div>
             <div style="display:flex; gap: 10px;">
@@ -67,6 +68,23 @@
             <div class="form-status" id="delete-account-status"></div>
           </form>
         </div>
+      </div>
+
+      <div class="card" id="rewards-card">
+        <h3 style="font-size: 22px;">Rewards</h3>
+        <p class="text-muted" style="font-size: 13.5px;">Earn 1 point for every $1 you spend. Unlock a tier and redeem it for a discount at checkout.</p>
+        <div class="rewards-points"><strong><%= user.rewardPoints %></strong> <span class="text-muted">points</span></div>
+        <div class="rewards-tiers">
+          <% rewardTiers.forEach(function(tier) { %>
+            <% var redeemed = user.redeemedTiers.indexOf(tier.threshold) !== -1; %>
+            <% var unlocked = user.rewardPoints >= tier.threshold; %>
+            <div class="rewards-tier <%= redeemed ? 'is-redeemed' : (unlocked ? 'is-unlocked' : 'is-locked') %>">
+              <div><strong><%= tier.threshold %> pts</strong> <span class="text-muted">— <%= tier.discount %>% off</span></div>
+              <span class="badge <%= unlocked && !redeemed ? 'badge-gold' : '' %>"><%= redeemed ? 'Redeemed' : (unlocked ? 'Ready to redeem' : 'Locked') %></span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
       </div>
 
       <div class="card">

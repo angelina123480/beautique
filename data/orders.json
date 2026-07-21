@@ -122,7 +122,7 @@
     "id": 1784226553519,
     "userId": 1,
     "userEmail": "admin@luna.com",
-    "status": "confirmed",
+    "status": "delivered",
     "items": [
       {
         "productId": 1,
@@ -137,7 +137,8 @@
     "total": 29.95,
     "paymentMethod": "online",
     "address": "mansourieh",
-    "createdAt": "2026-07-16T18:29:13.519Z"
+    "createdAt": "2026-07-16T18:29:13.519Z",
+    "updatedAt": "2026-07-21T06:22:52.998Z"
   },
   {
     "id": 1784527789533,
@@ -160,5 +161,58 @@
     "address": "lalalala",
     "createdAt": "2026-07-20T06:09:49.533Z",
     "cancelledAt": "2026-07-20T06:10:04.736Z"
+  },
+  {
+    "id": 1784542459448,
+    "userId": 1,
+    "userEmail": "admin@luna.com",
+    "status": "delivered",
+    "items": [
+      {
+        "productId": 1,
+        "name": "Velvet Satin Lip",
+        "quantity": 1,
+        "price": 24,
+        "shade": ""
+      },
+      {
+        "productId": 2,
+        "name": "Glow Serum",
+        "quantity": 1,
+        "price": 39,
+        "shade": ""
+      }
+    ],
+    "subtotal": 63,
+    "shipping": 0,
+    "total": 63,
+    "paymentMethod": "online",
+    "address": "lalalala",
+    "createdAt": "2026-07-20T10:14:19.448Z",
+    "updatedAt": "2026-07-21T06:22:43.997Z"
+  },
+  {
+    "id": 1784617501223,
+    "userId": 1,
+    "userEmail": "admin@luna.com",
+    "status": "confirmed",
+    "items": [
+      {
+        "productId": 1,
+        "name": "Velvet Satin Lip",
+        "quantity": 1,
+        "price": 24,
+        "shade": "Rose Nude"
+      }
+    ],
+    "subtotal": 24,
+    "discount": 0,
+    "redeemedTier": null,
+    "shipping": 5.95,
+    "total": 29.95,
+    "pointsEarned": 24,
+    "paymentMethod": "delivery",
+    "address": "lalalala",
+    "createdAt": "2026-07-21T07:05:01.223Z"
   }
 ]

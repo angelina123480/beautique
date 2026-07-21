@@ -25,7 +25,13 @@
       <div class="hero-collage">
         <% arrivals.slice(0, 2).forEach(function(product) { %>
           <a href="/product/<%= product.id %>" class="product-art hero-tile" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
-            <span class="art-emoji"><%= product.emoji %></span>
+            <% if (product.images && product.images.length) { %>
+              <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
+            <% } else if (product.emoji) { %>
+              <span class="art-emoji"><%= product.emoji %></span>
+            <% } else { %>
+              <span class="art-emoji"><%- icon('bottle') %></span>
+            <% } %>
           </a>
         <% }); %>
         <div class="hero-note"><span class="dot"></span> Free shipping over $50</div>
@@ -37,19 +43,19 @@
     <div class="container">
       <div class="value-strip">
         <div class="value-item reveal">
-          <span class="value-icon">🌿</span>
+          <span class="value-icon"><%- icon('leaf') %></span>
           <div><h4>Clean formulas</h4><p>Vegan, cruelty-free, and kind to sensitive skin.</p></div>
         </div>
         <div class="value-item reveal">
-          <span class="value-icon">🚚</span>
+          <span class="value-icon"><%- icon('box') %></span>
           <div><h4>Fast delivery</h4><p>Free over $50, tracked to your door.</p></div>
         </div>
         <div class="value-item reveal">
-          <span class="value-icon">🔒</span>
+          <span class="value-icon"><%- icon('lock') %></span>
           <div><h4>Secure checkout</h4><p>Pay online or on delivery — your choice.</p></div>
         </div>
         <div class="value-item reveal">
-          <span class="value-icon">💌</span>
+          <span class="value-icon"><%- icon('mail') %></span>
           <div><h4>Real support</h4><p>Questions? Our studio replies within a day.</p></div>
         </div>
       </div>
@@ -73,6 +79,72 @@
     </div>
   </section>
 
+  <% if (recommended.length) { %>
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow"><%= user ? 'Picked for you' : 'You might like' %></span>
+          <h2>Recommended for you</h2>
+        </div>
+      </div>
+      <div class="grid grid-4">
+        <% recommended.forEach(function(product) { %>
+          <%- include('partials/product-card', { product: product }) %>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (bestsellers.length) { %>
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Loved again and again</span>
+          <h2>Bestsellers</h2>
+        </div>
+        <div class="carousel-nav">
+          <button type="button" class="carousel-arrow" data-carousel-prev="bestsellers-track" aria-label="Scroll left">‹</button>
+          <button type="button" class="carousel-arrow" data-carousel-next="bestsellers-track" aria-label="Scroll right">›</button>
+        </div>
+      </div>
+      <div class="carousel-track" id="bestsellers-track">
+        <% bestsellers.forEach(function(product) { %>
+          <div class="carousel-item">
+            <%- include('partials/product-card', { product: product }) %>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (sale.length) { %>
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow" style="color: var(--danger);">Limited time</span>
+          <h2>On sale</h2>
+        </div>
+        <div class="carousel-nav">
+          <button type="button" class="carousel-arrow" data-carousel-prev="sale-track" aria-label="Scroll left">‹</button>
+          <button type="button" class="carousel-arrow" data-carousel-next="sale-track" aria-label="Scroll right">›</button>
+        </div>
+      </div>
+      <div class="carousel-track" id="sale-track">
+        <% sale.forEach(function(product) { %>
+          <div class="carousel-item">
+            <%- include('partials/product-card', { product: product }) %>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
   <section class="section" style="padding-top: 24px;">
     <div class="container">
       <div class="section-head">
@@ -84,7 +156,7 @@
       <div class="grid grid-3">
         <% categories.forEach(function(category) { %>
           <a class="category-card reveal" href="/shop?category=<%= category.id %>" style="--tone: <%= category.tone %>;">
-            <span class="cat-emoji"><%= category.emoji %></span>
+            <span class="cat-emoji"><%- categoryIcon(category.id) %></span>
             <h3><%= category.title %></h3>
             <p><%= category.text %></p>
             <span class="cat-count"><%= category.count %> product<%= category.count === 1 ? '' : 's' %> →</span>
@@ -94,11 +166,36 @@
     </div>
   </section>
 
+  <% if (testimonials.length) { %>
+  <section class="section" style="padding-top: 24px;">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Kind words</span>
+          <h2>Loved by our community</h2>
+        </div>
+      </div>
+      <div class="grid grid-3">
+        <% testimonials.forEach(function(t, i) { %>
+          <div class="testimonial-card reveal" style="transition-delay: <%= (i * 0.08).toFixed(2) %>s;">
+            <span class="stars"><%- '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating) %></span>
+            <p class="testimonial-quote">“<%= t.comment %>”</p>
+            <div class="testimonial-author">
+              <strong><%= t.userName %></strong>
+              <span class="text-muted">on <%= t.productName %></span>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
   <section class="section" style="padding-top: 24px;">
     <div class="container">
       <div class="newsletter-band reveal">
         <div>
-          <h2>Glow in your inbox ✨</h2>
+          <h2>Glow in your inbox</h2>
           <p>New arrivals, beauty rituals, and subscriber-only offers. No spam — just glow.</p>
         </div>
         <form class="newsletter-form" id="newsletter-form">

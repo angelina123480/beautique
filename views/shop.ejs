@@ -13,27 +13,41 @@
   </div>
 
   <section class="container" style="padding-bottom: 72px;">
+    <% var qsSort = activeSort !== 'featured' ? '&sort=' + activeSort : ''; %>
+    <% var qsSearch = searchTerm ? '&search=' + encodeURIComponent(searchTerm) : ''; %>
+    <% var qsPrice = activePrice ? '&price=' + activePrice : ''; %>
+    <% var qsRating = activeRating ? '&rating=' + activeRating : ''; %>
+    <% var qsInStock = activeInStock ? '&inStock=1' : ''; %>
+    <% var qsOnSale = activeOnSale ? '&onSale=1' : ''; %>
+    <% var qsExtra = qsSort + qsSearch + qsPrice + qsRating + qsInStock + qsOnSale; %>
+
     <div class="shop-toolbar">
       <form class="search-box" id="shop-search-form" method="get" action="/shop">
         <input type="text" name="search" id="shop-search-input" placeholder="Search products, brands…" value="<%= searchTerm %>">
         <% if (activeCategory) { %><input type="hidden" name="category" value="<%= activeCategory %>"><% } %>
         <% if (activeSort !== 'featured') { %><input type="hidden" name="sort" value="<%= activeSort %>"><% } %>
-        <button type="submit" aria-label="Search">🔍</button>
+        <% if (activePrice) { %><input type="hidden" name="price" value="<%= activePrice %>"><% } %>
+        <% if (activeRating) { %><input type="hidden" name="rating" value="<%= activeRating %>"><% } %>
+        <% if (activeInStock) { %><input type="hidden" name="inStock" value="1"><% } %>
+        <% if (activeOnSale) { %><input type="hidden" name="onSale" value="1"><% } %>
+        <button type="submit" aria-label="Search"><%- icon('search') %></button>
       </form>
 
       <div class="chip-row">
-        <% var qsSort = activeSort !== 'featured' ? '&sort=' + activeSort : ''; %>
-        <% var qsSearch = searchTerm ? '&search=' + encodeURIComponent(searchTerm) : ''; %>
-        <a class="chip <%= !activeCategory ? 'is-active' : '' %>" href="/shop?<%= (qsSort + qsSearch).replace(/^&/, '') %>">All</a>
+        <a class="chip <%= !activeCategory ? 'is-active' : '' %>" href="/shop?<%= qsExtra.replace(/^&/, '') %>">All</a>
         <% categories.forEach(function(category) { %>
           <a class="chip <%= activeCategory === category.id ? 'is-active' : '' %>"
-             href="/shop?category=<%= category.id %><%= qsSort %><%= qsSearch %>"><%= category.emoji %> <%= category.title %></a>
+             href="/shop?category=<%= category.id %><%= qsExtra %>"><%- categoryIcon(category.id) %> <%= category.title %></a>
         <% }); %>
       </div>
 
       <form method="get" action="/shop" id="shop-sort-form">
         <% if (activeCategory) { %><input type="hidden" name="category" value="<%= activeCategory %>"><% } %>
         <% if (searchTerm) { %><input type="hidden" name="search" value="<%= searchTerm %>"><% } %>
+        <% if (activePrice) { %><input type="hidden" name="price" value="<%= activePrice %>"><% } %>
+        <% if (activeRating) { %><input type="hidden" name="rating" value="<%= activeRating %>"><% } %>
+        <% if (activeInStock) { %><input type="hidden" name="inStock" value="1"><% } %>
+        <% if (activeOnSale) { %><input type="hidden" name="onSale" value="1"><% } %>
         <select class="select-pill" name="sort" id="shop-sort" aria-label="Sort products">
           <option value="featured" <%= activeSort === 'featured' ? 'selected' : '' %>>Sort: Featured</option>
           <option value="price-asc" <%= activeSort === 'price-asc' ? 'selected' : '' %>>Price: low → high</option>
@@ -44,13 +58,51 @@
       </form>
     </div>
 
+    <form method="get" action="/shop" id="shop-filters-form" class="filter-row">
+      <% if (activeCategory) { %><input type="hidden" name="category" value="<%= activeCategory %>"><% } %>
+      <% if (searchTerm) { %><input type="hidden" name="search" value="<%= searchTerm %>"><% } %>
+      <% if (activeSort !== 'featured') { %><input type="hidden" name="sort" value="<%= activeSort %>"><% } %>
+
+      <select class="select-pill" name="price" id="shop-filter-price" aria-label="Filter by price">
+        <option value="">Any price</option>
+        <option value="under25" <%= activePrice === 'under25' ? 'selected' : '' %>>Under $25</option>
+        <option value="25-50" <%= activePrice === '25-50' ? 'selected' : '' %>>$25 – $50</option>
+        <option value="50-100" <%= activePrice === '50-100' ? 'selected' : '' %>>$50 – $100</option>
+        <option value="over100" <%= activePrice === 'over100' ? 'selected' : '' %>>Over $100</option>
+      </select>
+
+      <select class="select-pill" name="rating" id="shop-filter-rating" aria-label="Filter by rating">
+        <option value="">Any rating</option>
+        <option value="4" <%= activeRating === '4' ? 'selected' : '' %>>4★ &amp; up</option>
+        <option value="3" <%= activeRating === '3' ? 'selected' : '' %>>3★ &amp; up</option>
+      </select>
+
+      <label class="filter-check">
+        <input type="checkbox" name="inStock" id="shop-filter-instock" value="1" <%= activeInStock ? 'checked' : '' %>>
+        In stock only
+      </label>
+
+      <label class="filter-check">
+        <input type="checkbox" name="onSale" id="shop-filter-onsale" value="1" <%= activeOnSale ? 'checked' : '' %>>
+        On sale only
+      </label>
+
+      <% if (activePrice || activeRating || activeInStock || activeOnSale) { %>
+        <% var keepParams = []; %>
+        <% if (activeCategory) { keepParams.push('category=' + activeCategory); } %>
+        <% if (searchTerm) { keepParams.push('search=' + encodeURIComponent(searchTerm)); } %>
+        <% if (activeSort !== 'featured') { keepParams.push('sort=' + activeSort); } %>
+        <a class="link-more" href="/shop<%= keepParams.length ? '?' + keepParams.join('&') : '' %>">Clear filters</a>
+      <% } %>
+    </form>
+
     <% if (searchTerm) { %>
       <p class="text-muted" style="margin-bottom: 22px;"><%= products.length %> result<%= products.length === 1 ? '' : 's' %> for “<%= searchTerm %>”</p>
     <% } %>
 
     <% if (products.length === 0) { %>
       <div class="empty-state">
-        <span class="empty-emoji">🔎</span>
+        <span class="empty-emoji"><%- icon('search') %></span>
         <h3>No products found</h3>
         <p>Try a different search, or browse a brand like Luna, Aura, or Nova.</p>
         <a class="btn btn-soft" href="/shop">Clear filters</a>

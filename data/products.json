@@ -7,7 +7,7 @@
     "badge": "Bestseller",
     "emoji": "💄",
     "description": "A soft matte finish with lasting comfort.",
-    "stock": 9,
+    "stock": 7,
     "soldOut": false,
     "images": [
       "/img/products/velvet-satin-liprosenude.jpg",
@@ -57,7 +57,7 @@
     "badge": "New",
     "emoji": "✨",
     "description": "A dewy serum that brightens and hydrates.",
-    "stock": 3,
+    "stock": 2,
     "soldOut": false,
     "images": [
       "/img/products/glow-serum.jpg"
@@ -147,7 +147,8 @@
           "/img/products/model-dawn-blush-rosewood.webp"
         ]
       }
-    ]
+    ],
+    "salePrice": 21
   },
   {
     "id": 5,
@@ -185,6 +186,199 @@
     "reviews": [],
     "category": "fragrance",
     "tone": 45,
-    "shades": []
+    "shades": [],
+    "salePrice": 35
+  },
+  {
+    "id": 7,
+    "name": "foundation",
+    "brand": "luna",
+    "price": 40,
+    "salePrice": 30,
+    "badge": "New",
+    "emoji": "",
+    "category": "makeup",
+    "tone": 122,
+    "description": "Second Skin Foundation blends effortlessly into skin, delivering buildable, hydrating coverage that lasts all day.",
+    "stock": 15,
+    "soldOut": false,
+    "images": [
+      "/img/products/5759d44a448401c6.jpg"
+    ],
+    "modelImage": "",
+    "reviews": [],
+    "shades": [
+      {
+        "name": "shade-01",
+        "label": "Shade 01",
+        "color": "#F5DFC7"
+      },
+      {
+        "name": "shade-02",
+        "label": "Shade 02",
+        "color": "#F2D9BE"
+      },
+      {
+        "name": "shade-03",
+        "label": "Shade 03",
+        "color": "#EFD0AE"
+      },
+      {
+        "name": "shade-04",
+        "label": "Shade 04",
+        "color": "#EAC79E"
+      },
+      {
+        "name": "shade-05",
+        "label": "Shade 05",
+        "color": "#E4BC8E"
+      },
+      {
+        "name": "shade-06",
+        "label": "Shade 06",
+        "color": "#DEB280"
+      },
+      {
+        "name": "shade-07",
+        "label": "Shade 07",
+        "color": "#D6A672"
+      },
+      {
+        "name": "shade-08",
+        "label": "Shade 08",
+        "color": "#CD9A66"
+      },
+      {
+        "name": "shade-09",
+        "label": "Shade 09",
+        "color": "#C58F5C"
+      },
+      {
+        "name": "shade-10",
+        "label": "Shade 10",
+        "color": "#BC8353"
+      },
+      {
+        "name": "shade-11",
+        "label": "Shade 11",
+        "color": "#B37849"
+      },
+      {
+        "name": "shade-12",
+        "label": "Shade 12",
+        "color": "#A66D42"
+      },
+      {
+        "name": "shade-13",
+        "label": "Shade 13",
+        "color": "#9C633B"
+      },
+      {
+        "name": "shade-14",
+        "label": "Shade 14",
+        "color": "#8F5735"
+      },
+      {
+        "name": "shade-15",
+        "label": "Shade 15",
+        "color": "#824C2F"
+      },
+      {
+        "name": "shade-16",
+        "label": "Shade 16",
+        "color": "#764429"
+      },
+      {
+        "name": "shade-17",
+        "label": "Shade 17",
+        "color": "#6A3B24"
+      },
+      {
+        "name": "shade-18",
+        "label": "Shade 18",
+        "color": "#5E331F"
+      },
+      {
+        "name": "shade-19",
+        "label": "Shade 19",
+        "color": "#542C1B"
+      },
+      {
+        "name": "shade-20",
+        "label": "Shade 20",
+        "color": "#4A2517"
+      },
+      {
+        "name": "shade-21",
+        "label": "Shade 21",
+        "color": "#402014"
+      },
+      {
+        "name": "shade-22",
+        "label": "Shade 22",
+        "color": "#361A10"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Concealer",
+    "brand": "luna",
+    "price": 20,
+    "salePrice": null,
+    "badge": "",
+    "emoji": "",
+    "category": "makeup",
+    "tone": 42,
+    "description": "Bright Eye Concealer melts into skin to instantly brighten, cover, and smooth — for a fresh, awake look that lasts all day.",
+    "stock": 10,
+    "soldOut": false,
+    "images": [
+      "/img/products/7d45ffb0e08e114b.webp"
+    ],
+    "modelImage": "",
+    "reviews": [],
+    "shades": [
+      {
+        "name": "shade-01",
+        "label": "Shade 01",
+        "color": "#F7E4C7"
+      },
+      {
+        "name": "shade-02",
+        "label": "Shade 02",
+        "color": "#F2D9B8"
+      },
+      {
+        "name": "shade-03",
+        "label": "Shade 03",
+        "color": "#ECCBA0"
+      },
+      {
+        "name": "shade-04",
+        "label": "Shade 04",
+        "color": "#E4BC8C"
+      },
+      {
+        "name": "shade-05",
+        "label": "Shade 05",
+        "color": "#DCAD78"
+      },
+      {
+        "name": "shade-06",
+        "label": "Shade 06",
+        "color": "#D29D66"
+      },
+      {
+        "name": "shade-07",
+        "label": "Shade 07",
+        "color": "#C68F58"
+      },
+      {
+        "name": "shade-08",
+        "label": "Shade 08",
+        "color": "#B87F4A"
+      }
+    ]
   }
 ]

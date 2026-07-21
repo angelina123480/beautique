@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">AI-assisted</span>
+    <h1>Find your shade</h1>
+    <p class="lead">Upload a selfie or use your webcam — we'll sample your skin tone and match it to the closest shade in our collection.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <% if (!shadeCatalog.length) { %>
+      <div class="notice" style="margin-bottom: 24px;">
+        No shades are set up in the catalog yet, so there's nothing to match against. Add shades to a product in the admin panel first.
+      </div>
+    <% } %>
+
+    <div class="card matcher-remembered" id="matcher-remembered" style="display:none; margin-bottom: 24px;">
+      <img id="matcher-remembered-thumb" alt="Your remembered photo">
+      <div class="matcher-remembered-info">
+        <strong>Welcome back</strong>
+        <span class="text-muted">We remembered your photo from last time.</span>
+      </div>
+      <div class="matcher-remembered-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="matcher-remembered-use">Use this photo</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="matcher-remembered-forget">Forget it</button>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="align-items: start;">
+      <!-- Capture card -->
+      <div class="card">
+        <h3 style="font-size: 20px;">1. Capture your photo</h3>
+
+        <div class="matcher-tabs">
+          <button type="button" class="matcher-tab is-active" data-matcher-tab="upload">Upload photo</button>
+          <button type="button" class="matcher-tab" data-matcher-tab="webcam">Use webcam</button>
+        </div>
+
+        <div id="matcher-panel-upload" class="matcher-panel">
+          <input type="file" id="matcher-file-input" accept="image/*" style="display:none;">
+          <button type="button" class="btn btn-soft btn-block" id="matcher-upload-btn">Choose a photo…</button>
+        </div>
+
+        <div id="matcher-panel-webcam" class="matcher-panel" style="display:none;">
+          <button type="button" class="btn btn-soft btn-block" id="matcher-webcam-start">Turn on webcam</button>
+          <button type="button" class="btn btn-primary btn-block" id="matcher-webcam-capture" style="display:none; margin-top:10px;">Capture photo</button>
+        </div>
+
+        <label class="filter-check matcher-consent">
+          <input type="checkbox" id="matcher-remember-consent">
+          Remember my photo on this device so I can skip this step next time
+        </label>
+        <p class="text-muted" style="font-size: 12px; margin: 4px 0 14px;">Stored only in your browser's local storage — never uploaded or sent to our servers. You can forget it anytime.</p>
+
+        <div class="matcher-frame" id="matcher-frame">
+          <video id="matcher-video" playsinline muted style="display:none;"></video>
+          <canvas id="matcher-canvas" style="display:none;"></canvas>
+          <div class="matcher-placeholder" id="matcher-placeholder">
+            <%- icon('user') %>
+            <span>Your photo will appear here</span>
+          </div>
+        </div>
+
+        <div class="matcher-status" id="matcher-status" role="status"></div>
+
+        <p class="text-muted matcher-disclaimer">
+          <%- icon('alert') %>
+          For best results: use natural daylight (avoid strong yellow/warm indoor bulbs), remove makeup from the sampled area if possible, and face the camera directly with your whole face in frame. Webcam lighting varies a lot from device to device, so this is a helpful starting point, not a calibrated color match — think of it as a first guess to narrow down shades worth swatching in person.
+        </p>
+      </div>
+
+      <!-- Results card -->
+      <div class="card" id="matcher-results-card">
+        <h3 style="font-size: 20px;">2. Your closest shades</h3>
+        <div id="matcher-results">
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji"><%- icon('lipstick') %></span>
+            <h3>No photo yet</h3>
+            <p>Capture or upload a photo to see your top 3 shade matches.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- face-api.js: free, MIT-licensed, runs entirely client-side on top of TensorFlow.js
+       (no API keys, no server calls). Swap this CDN script + MODEL_URL in
+       shade-matcher.js for a self-hosted copy under /public/models if you'd
+       rather not depend on a third-party CDN in production. -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="/javascripts/color-science.js?v=<%= assetVersion('javascripts/color-science.js') %>"></script>
+  <script>
+    /* Server-rendered shade catalog -> plain global the page script reads.
+       Swap catalog.getProducts()-derived data (see routes/index.js) for your
+       real product/shade data source whenever it changes. */
+    window.SHADE_CATALOG = <%- JSON.stringify(shadeCatalog) %>;
+  </script>
+
+  <%- include('partials/footer', { pageScript: 'shade-matcher' }) %>
+</body>
+</html>

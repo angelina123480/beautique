@@ -31,12 +31,12 @@
           <div class="pay-options">
             <label class="pay-option is-selected">
               <input type="radio" name="paymentMethod" value="online" checked>
-              <span class="pay-title">💳 Pay online</span>
+              <span class="pay-title"><%- icon('card') %> Pay online</span>
               <span class="pay-sub">Secure card payment</span>
             </label>
             <label class="pay-option">
               <input type="radio" name="paymentMethod" value="delivery">
-              <span class="pay-title">📦 Pay on delivery</span>
+              <span class="pay-title"><%- icon('box') %> Pay on delivery</span>
               <span class="pay-sub">Cash or card at your door</span>
             </label>
           </div>
@@ -47,6 +47,12 @@
         <div class="card" id="checkout-summary-card">
           <h3 style="font-size: 22px;">Summary</h3>
           <div id="checkout-summary"></div>
+          <% if (reward) { %>
+            <label class="reward-toggle">
+              <input type="checkbox" id="apply-reward" data-tier="<%= reward.threshold %>" data-discount="<%= reward.discount %>">
+              <span>Apply my reward — <strong><%= reward.discount %>% off</strong> <span class="text-muted">(<%= reward.threshold %>-point tier)</span></span>
+            </label>
+          <% } %>
           <% if (!user) { %>
             <div class="notice" style="margin-bottom: 14px;">
               Please <a href="/auth">sign in</a> to place your order — it only takes a minute and lets you track everything.
@@ -54,7 +60,7 @@
           <% } %>
           <button class="btn btn-primary btn-block" id="place-order" type="button" <%= user ? '' : 'disabled' %>>Place order</button>
           <div class="form-status" id="checkout-status"></div>
-          <p class="text-muted" style="font-size: 12.5px; margin-top: 12px;">🔒 Your details are safe with us. Free shipping applies automatically over $50.</p>
+          <p class="text-muted" style="font-size: 12.5px; margin-top: 12px;"><%- icon('lock') %> Your details are safe with us. Free shipping applies automatically over $50.</p>
         </div>
         <a class="btn btn-ghost btn-block" href="/shop" style="margin-top: 14px;">← Continue shopping</a>
       </div>

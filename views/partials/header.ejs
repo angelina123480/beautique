@@ -1,8 +1,8 @@
 <div class="announce">
   <div class="container">
-    <span class="announce-msg">✨ Free shipping on orders over $50 — vegan &amp; cruelty-free, always</span>
+    <span class="announce-msg">Free shipping on orders over $50 — vegan &amp; cruelty-free, always</span>
     <button type="button" class="announce-deliver" id="deliver-pill" data-signed-in="<%= user ? '1' : '' %>" title="Set your delivery address">
-      📍 <span id="deliver-pill-text"><%= user && user.address ? user.address : 'Set delivery address' %></span>
+      <%- icon('pin') %> <span id="deliver-pill-text"><%= user && user.address ? user.address : 'Set delivery address' %></span>
     </button>
   </div>
 </div>
@@ -14,6 +14,7 @@
     <nav class="main-nav" aria-label="Main navigation">
       <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
       <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
+      <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Match</a>
       <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
       <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
       <% if (user && user.role === 'admin') { %>
@@ -22,20 +23,30 @@
     </nav>
 
     <div class="header-actions">
+      <% if (user) { %>
+        <a href="/profile#rewards-card" class="points-pill" title="Your reward points"><%- icon('star') %> <%= user.rewardPoints %></a>
+      <% } %>
       <a class="icon-btn" href="<%= user ? '/profile' : '/auth' %>" title="<%= user ? 'My account' : 'Sign in' %>" aria-label="Account">
-        <%= user ? '👤' : '🔑' %>
+        <%- icon('user') %>
+      </a>
+      <a class="icon-btn" href="/wishlist" title="Your wishlist" aria-label="Open wishlist">
+        <%- icon('heart') %>
+        <span class="cart-count-badge" id="wishlist-count-badge">0</span>
       </a>
       <button class="icon-btn" id="cart-open" type="button" title="Your bag" aria-label="Open shopping bag">
-        🛍️
+        <%- icon('bag') %>
         <span class="cart-count-badge" id="cart-count-badge">0</span>
       </button>
-      <button class="icon-btn nav-toggle" id="nav-toggle" type="button" aria-label="Toggle menu">☰</button>
+      <button class="icon-btn nav-toggle" id="nav-toggle" type="button" aria-label="Toggle menu">
+        <%- icon('menu') %>
+      </button>
     </div>
   </div>
 
   <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
     <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
     <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
+    <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Match</a>
     <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
     <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
     <% if (user && user.role === 'admin') { %>
@@ -50,7 +61,7 @@
 <aside class="cart-drawer" id="cart-drawer" aria-label="Shopping bag">
   <div class="cart-drawer-head">
     <h3>Your bag</h3>
-    <button class="modal-close" id="cart-close" type="button" aria-label="Close bag">✕</button>
+    <button class="modal-close" id="cart-close" type="button" aria-label="Close bag"><%- icon('close') %></button>
   </div>
   <div class="cart-drawer-body" id="cart-body"></div>
   <div class="cart-drawer-foot" id="cart-foot"></div>
@@ -64,7 +75,7 @@
         <h3>Delivery location</h3>
         <p class="text-muted" style="margin:4px 0 0; font-size:14px;">Type your address or pick a point on the map.</p>
       </div>
-      <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+      <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
     </div>
     <div class="field">
       <label for="deliver-input">Address</label>
@@ -76,8 +87,8 @@
       <div>
         <p style="font-weight:700; font-size:14px; margin-bottom:6px;">Selected location</p>
         <p id="map-status" class="text-muted" style="font-size:13.5px; min-height:60px;">Open the map by clicking “Load map”, then click anywhere to drop a pin.</p>
-        <button class="btn btn-soft btn-sm btn-block" id="map-load" type="button" style="margin-bottom:10px;">🗺️ Load map</button>
-        <button class="btn btn-ghost btn-sm btn-block" id="map-locate" type="button" style="margin-bottom:10px;">📡 Use my current location</button>
+        <button class="btn btn-soft btn-sm btn-block" id="map-load" type="button" style="margin-bottom:10px;"><%- icon('map') %> Load map</button>
+        <button class="btn btn-ghost btn-sm btn-block" id="map-locate" type="button" style="margin-bottom:10px;"><%- icon('crosshair') %> Use my current location</button>
       </div>
     </div>
     <div class="modal-actions">
@@ -93,7 +104,7 @@
   <div class="modal" style="max-width:400px;">
     <div class="modal-head">
       <h3 id="confirm-title">Are you sure?</h3>
-      <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+      <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
     </div>
     <p id="confirm-text" class="text-muted" style="font-size:14.5px;"></p>
     <div class="modal-actions">

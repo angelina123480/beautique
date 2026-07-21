@@ -27,7 +27,7 @@
           <div class="gallery-thumbs" id="gallery-thumbs" data-images='<%- JSON.stringify(product.images || []) %>'></div>
         <% } else { %>
           <div class="product-art gallery-main" id="product-art" style="--tone: <%= product.tone %>;">
-            <span class="art-emoji" style="font-size: clamp(80px, 14vw, 130px);"><%= product.emoji %></span>
+            <span class="art-emoji" style="font-size: clamp(80px, 14vw, 130px);"><%- product.emoji ? product.emoji : icon('bottle') %></span>
           </div>
         <% } %>
         <% if (product.modelImage) { %>
@@ -47,7 +47,16 @@
           <% } %>
         </div>
 
-        <span class="price"><%= money(product.price) %> <small>· free shipping over $50</small></span>
+        <span class="price-group">
+          <% if (product.onSale) { %>
+            <span class="price-original" style="font-size: 20px;"><%= money(product.price) %></span>
+            <span class="price price-sale" style="font-size: 30px;"><%= money(product.salePrice) %></span>
+            <span class="badge-sale">-<%= product.discountPercent %>%</span>
+          <% } else { %>
+            <span class="price" style="font-size: 30px;"><%= money(product.price) %></span>
+          <% } %>
+          <small class="text-muted">· free shipping over $50</small>
+        </span>
 
         <% if (!product.available) { %>
           <span class="stock-pill stock-out">Sold out</span>
@@ -67,6 +76,7 @@
                 <button type="button" class="shade-swatch <%= index === 0 ? 'is-active' : '' %>" style="background-color: <%= shade.color %>;" data-name="<%= shade.name %>" data-label="<%= shade.label %>" data-color="<%= shade.color %>" data-images='<%- JSON.stringify(shade.images || []) %>' data-tint-photos="<%= shade.tintPhotos ? '1' : '' %>" aria-label="<%= shade.label %>" title="<%= shade.label %>"></button>
               <% }); %>
             </div>
+            <a href="/shade-matcher" class="link-more" style="margin-top: 8px; display: inline-block;">Not sure which shade? Find your match →</a>
           </div>
         <% } %>
 
@@ -80,30 +90,60 @@
             <button class="btn btn-primary add-to-cart" type="button" id="pdp-add"
                     data-id="<%= product.id %>"
                     data-name="<%= product.name %>"
-                    data-price="<%= product.price %>"
+                    data-price="<%= product.effectivePrice %>"
                     data-emoji="<%= product.emoji %>"
                     data-tone="<%= product.tone %>"
                     data-stock="<%= product.stock %>"
-                    data-shade="<%= product.selectedShade ? product.selectedShade.name : '' %>">Add to bag — <%= money(product.price) %></button>
+                    data-shade="<%= product.selectedShade ? product.selectedShade.name : '' %>">Add to bag — <%= money(product.effectivePrice) %></button>
           <% } else { %>
             <button class="btn btn-primary" disabled>Sold out</button>
             <a class="btn btn-ghost" href="/shop">Browse alternatives</a>
           <% } %>
+          <button type="button" class="wishlist-btn wishlist-btn-pdp"
+                  data-id="<%= product.id %>"
+                  data-name="<%= product.name %>"
+                  data-price="<%= product.effectivePrice %>"
+                  data-emoji="<%= product.emoji %>"
+                  data-tone="<%= product.tone %>"
+                  data-image="<%= (product.images && product.images[0]) || '' %>"
+                  data-stock="<%= product.stock %>"
+                  aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
         </div>
 
         <div class="accordion">
-          <details open>
-            <summary>Why you'll love it</summary>
-            <div class="accordion-body"><%= product.description %> Designed to layer beautifully with the rest of your Beautique ritual.</div>
-          </details>
-          <details>
-            <summary>Shipping &amp; returns</summary>
-            <div class="accordion-body">Free tracked shipping on orders over $50 (otherwise $5.95). Unopened products can be returned within 30 days for a full refund.</div>
-          </details>
-          <details>
-            <summary>Our promise</summary>
-            <div class="accordion-body">Every Beautique formula is vegan, cruelty-free, and made in small batches with skin-kind ingredients.</div>
-          </details>
+          <div class="accordion-item is-open">
+            <button type="button" class="accordion-trigger" aria-expanded="true">
+              <span>Why you'll love it</span>
+              <span class="accordion-icon">+</span>
+            </button>
+            <div class="accordion-panel">
+              <div class="accordion-panel-inner">
+                <div class="accordion-body"><%= product.description %> Designed to layer beautifully with the rest of your Beautique ritual.</div>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button type="button" class="accordion-trigger" aria-expanded="false">
+              <span>Shipping &amp; returns</span>
+              <span class="accordion-icon">+</span>
+            </button>
+            <div class="accordion-panel">
+              <div class="accordion-panel-inner">
+                <div class="accordion-body">Free tracked shipping on orders over $50 (otherwise $5.95). Unopened products can be returned within 30 days for a full refund.</div>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button type="button" class="accordion-trigger" aria-expanded="false">
+              <span>Our promise</span>
+              <span class="accordion-icon">+</span>
+            </button>
+            <div class="accordion-panel">
+              <div class="accordion-panel-inner">
+                <div class="accordion-body">Every Beautique formula is vegan, cruelty-free, and made in small batches with skin-kind ingredients.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -117,7 +157,7 @@
       </div>
 
       <div class="grid grid-2" style="align-items: start;">
-        <div class="card">
+        <div class="card reveal">
           <% if (reviews.length) { %>
             <div class="review-summary-box">
               <span class="big-score"><%= product.rating %></span>
@@ -150,14 +190,14 @@
             </div>
           <% } else { %>
             <div class="empty-state" style="padding: 40px 10px;">
-              <span class="empty-emoji">💬</span>
+              <span class="empty-emoji"><%- icon('message') %></span>
               <h3>No reviews yet</h3>
               <p>Be the first to share your experience.</p>
             </div>
           <% } %>
         </div>
 
-        <div class="card">
+        <div class="card reveal" style="transition-delay: 0.08s;">
           <h3 style="font-size: 22px;">Write a review</h3>
           <% if (user) { %>
             <form id="review-form">

@@ -10,7 +10,8 @@
     "phone": "",
     "address": "",
     "resetOtp": "",
-    "resetOtpExpires": ""
+    "resetOtpExpires": "",
+    "rewardPoints": 24
   },
   {
     "id": 1784203304015,

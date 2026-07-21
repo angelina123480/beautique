@@ -49,7 +49,7 @@
     if (!stack) return;
     var el = document.createElement('div');
     el.className = 'toast toast-' + (type || 'success');
-    el.innerHTML = '<span class="toast-icon">' + (type === 'error' ? '✖' : '✔') + '</span><span></span>';
+    el.innerHTML = '<span class="toast-icon">' + (type === 'error' ? window.BeautiqueIcons.alert : window.BeautiqueIcons.check) + '</span><span></span>';
     el.lastChild.textContent = message;
     stack.appendChild(el);
     setTimeout(function () {
@@ -120,7 +120,7 @@
     if (!input) return;
     var showing = input.type === 'text';
     input.type = showing ? 'password' : 'text';
-    toggle.textContent = showing ? '👁️' : '🙈';
+    toggle.innerHTML = window.BeautiqueIcons[showing ? 'eye' : 'eyeOff'];
     toggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
   });
 
@@ -129,7 +129,8 @@
   var navToggle = $('#nav-toggle');
   if (navToggle) {
     navToggle.addEventListener('click', function () {
-      $('#mobile-nav').classList.toggle('is-open');
+      var open = $('#mobile-nav').classList.toggle('is-open');
+      navToggle.innerHTML = window.BeautiqueIcons[open ? 'close' : 'menu'];
     });
   }
 
@@ -180,6 +181,13 @@
       cart.push({ id: item.id, name: item.name, price: item.price, emoji: item.emoji, tone: item.tone, stock: stock, quantity: wanted, shade: item.shade || '' });
     }
     saveCart(cart);
+
+    var badge = $('#cart-count-badge');
+    if (badge) {
+      badge.classList.remove('is-bumping');
+      void badge.offsetWidth; /* restart the animation even if it's already mid-bump */
+      badge.classList.add('is-bumping');
+    }
   }
 
   function setQuantity(id, shade, quantity) {
@@ -211,7 +219,7 @@
     var shadeAttr = escapeHtml(item.shade || '');
     return '' +
       '<div class="cart-line" data-id="' + item.id + '" data-shade="' + shadeAttr + '">' +
-        '<span class="product-art" style="--tone:' + (Number(item.tone) || 340) + ';"><span class="art-emoji" style="font-size:26px;">' + escapeHtml(item.emoji || '🌸') + '</span></span>' +
+        '<span class="product-art" style="--tone:' + (Number(item.tone) || 340) + ';"><span class="art-emoji" style="font-size:26px;">' + (item.emoji ? escapeHtml(item.emoji) : window.BeautiqueIcons.bottle) + '</span></span>' +
         '<div class="cart-line-info">' +
           '<strong>' + escapeHtml(item.name) + '</strong>' +
           (item.shade ? '<span class="cart-line-price">Shade: ' + escapeHtml(item.shade) + '</span><br>' : '') +
@@ -241,7 +249,7 @@
     if (!body || !foot) return;
 
     if (!cart.length) {
-      body.innerHTML = '<div class="cart-empty-state"><span class="cart-empty-emoji">🛍️</span><strong>Your bag is empty</strong><p style="margin-top:6px;">Fill it with something lovely.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
+      body.innerHTML = '<div class="cart-empty-state"><span class="cart-empty-emoji">' + window.BeautiqueIcons.bag + '</span><strong>Your bag is empty</strong><p style="margin-top:6px;">Fill it with something lovely.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
       foot.innerHTML = '';
       return;
     }
@@ -255,8 +263,8 @@
 
     foot.innerHTML = '' +
       (remaining > 0
-        ? '<div class="free-ship-note" style="color: var(--gold);">Add ' + money(remaining) + ' more for free shipping ✨</div>'
-        : '<div class="free-ship-note">🎉 You unlocked free shipping!</div>') +
+        ? '<div class="free-ship-note" style="color: var(--gold);">Add ' + money(remaining) + ' more for free shipping</div>'
+        : '<div class="free-ship-note">You unlocked free shipping!</div>') +
       '<div class="free-ship-progress"><i style="width:' + progress + '%"></i></div>' +
       '<div class="cart-totals-row"><span>Subtotal</span><span>' + money(subtotal) + '</span></div>' +
       '<div class="cart-totals-row"><span>Shipping</span><span>' + (shipping === 0 ? 'Free' : money(shipping)) + '</span></div>' +
@@ -301,7 +309,7 @@
         stock: Number(add.getAttribute('data-stock')),
         shade: add.getAttribute('data-shade') || ''
       }, qty);
-      toast('Added to your bag 🛍️');
+      toast('Added to your bag');
       openCartDrawer();
       return;
     }
@@ -328,6 +336,77 @@
     if (remove) {
       removeFromCart(Number(remove.getAttribute('data-cart-remove')), remove.getAttribute('data-shade') || '');
     }
+  });
+
+  /* ---------------- Wishlist ---------------- */
+
+  var WISHLIST_KEY = 'beautiqueWishlist';
+
+  function getWishlist() {
+    try {
+      var list = JSON.parse(localStorage.getItem(WISHLIST_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveWishlist(list) {
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(list));
+    renderWishlistState();
+    document.dispatchEvent(new CustomEvent('wishlist:change'));
+  }
+
+  function toggleWishlist(item) {
+    var list = getWishlist();
+    var idx = list.findIndex(function (line) { return line.id === item.id; });
+    var added;
+    if (idx >= 0) {
+      list.splice(idx, 1);
+      added = false;
+    } else {
+      list.push(item);
+      added = true;
+    }
+    saveWishlist(list);
+    return added;
+  }
+
+  function removeFromWishlist(id) {
+    saveWishlist(getWishlist().filter(function (item) { return item.id !== id; }));
+  }
+
+  function renderWishlistState() {
+    var ids = getWishlist().map(function (item) { return item.id; });
+    $$('.wishlist-btn').forEach(function (btn) {
+      var id = Number(btn.getAttribute('data-id'));
+      var active = ids.indexOf(id) !== -1;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+    var badge = $('#wishlist-count-badge');
+    if (badge) {
+      badge.textContent = ids.length;
+      badge.classList.toggle('is-visible', ids.length > 0);
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var wishBtn = e.target.closest('.wishlist-btn');
+    if (!wishBtn) return;
+    var added = toggleWishlist({
+      id: Number(wishBtn.getAttribute('data-id')),
+      name: wishBtn.getAttribute('data-name'),
+      price: Number(wishBtn.getAttribute('data-price')),
+      emoji: wishBtn.getAttribute('data-emoji'),
+      tone: Number(wishBtn.getAttribute('data-tone')),
+      image: wishBtn.getAttribute('data-image') || '',
+      stock: Number(wishBtn.getAttribute('data-stock')) || 99
+    });
+    wishBtn.classList.remove('is-popping');
+    void wishBtn.offsetWidth;
+    wishBtn.classList.add('is-popping');
+    toast(added ? 'Saved to your wishlist' : 'Removed from wishlist');
   });
 
   /* ---------------- Delivery address + lazy map ---------------- */
@@ -371,7 +450,7 @@
           .then(function () {
             setPillText(address);
             closeModal(deliverSave);
-            toast('Delivery address saved 📍');
+            toast('Delivery address saved');
           })
           .catch(function (err) {
             status.textContent = err.message;
@@ -381,7 +460,7 @@
         localStorage.setItem(ADDRESS_KEY, address);
         setPillText(address);
         closeModal(deliverSave);
-        toast('Delivery address saved 📍');
+        toast('Delivery address saved');
       }
     });
   }
@@ -454,7 +533,7 @@
         $('#map-status').textContent = 'Click anywhere on the map to drop a pin.';
       }).catch(function (err) {
         mapLoad.disabled = false;
-        mapLoad.textContent = '🗺️ Load map';
+        mapLoad.innerHTML = window.BeautiqueIcons.map + ' Load map';
         $('#map-status').textContent = err.message;
       });
     });
@@ -499,7 +578,46 @@
     $$('.reveal').forEach(function (el) { el.classList.add('is-visible'); });
   }
 
+  /* ---------------- Carousels ---------------- */
+
+  document.addEventListener('click', function (e) {
+    var prevBtn = e.target.closest('[data-carousel-prev]');
+    var nextBtn = e.target.closest('[data-carousel-next]');
+    var btn = prevBtn || nextBtn;
+    if (!btn) return;
+    var track = document.getElementById(btn.getAttribute(prevBtn ? 'data-carousel-prev' : 'data-carousel-next'));
+    if (!track) return;
+    var amount = track.clientWidth * 0.85;
+    track.scrollBy({ left: prevBtn ? -amount : amount, behavior: 'smooth' });
+  });
+
+  /* ---------------- Image skeleton shimmer ---------------- */
+
+  $$('.art-photo, #gallery-main-img').forEach(function (img) {
+    if (img.complete && img.naturalWidth) return;
+    var wrap = img.closest('.product-art, .gallery-main');
+    if (wrap) wrap.classList.add('is-img-loading');
+    img.addEventListener('load', function () {
+      if (wrap) wrap.classList.remove('is-img-loading');
+    }, { once: true });
+    img.addEventListener('error', function () {
+      if (wrap) wrap.classList.remove('is-img-loading');
+    }, { once: true });
+  });
+
+  /* ---------------- Header shadow on scroll ---------------- */
+
+  var siteHeader = $('.site-header');
+  if (siteHeader) {
+    var updateHeaderShadow = function () {
+      siteHeader.classList.toggle('is-scrolled', window.scrollY > 8);
+    };
+    updateHeaderShadow();
+    window.addEventListener('scroll', updateHeaderShadow, { passive: true });
+  }
+
   renderCart();
+  renderWishlistState();
 
   window.Beautique = {
     $: $,
@@ -524,6 +642,12 @@
     },
     renderCart: renderCart,
     openCartDrawer: openCartDrawer,
-    closeCartDrawer: closeCartDrawer
+    closeCartDrawer: closeCartDrawer,
+    wishlist: {
+      get: getWishlist,
+      toggle: toggleWishlist,
+      remove: removeFromWishlist
+    },
+    renderWishlistState: renderWishlistState
   };
 })();

@@ -249,5 +249,77 @@
     "variant": "modern",
     "delivered": true,
     "createdAt": "2026-07-20T06:10:04.816Z"
+  },
+  {
+    "id": 1784542459462,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784542459448 is confirmed 💐",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-20T10:14:19.462Z"
+  },
+  {
+    "id": 1784542459984,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-20T10:14:19.984Z"
+  },
+  {
+    "id": 1784614952908,
+    "type": "order_status",
+    "to": "admin@luna.com",
+    "subject": "Order 1784542459448 update: shipped",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T06:22:32.908Z"
+  },
+  {
+    "id": 1784614956093,
+    "type": "order_status",
+    "to": "admin@luna.com",
+    "subject": "Order 1784226553519 update: shipped",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T06:22:36.093Z"
+  },
+  {
+    "id": 1784614964072,
+    "type": "order_status",
+    "to": "admin@luna.com",
+    "subject": "Order 1784542459448 update: delivered",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T06:22:44.072Z"
+  },
+  {
+    "id": 1784614973069,
+    "type": "order_status",
+    "to": "admin@luna.com",
+    "subject": "Order 1784226553519 update: delivered",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T06:22:53.069Z"
+  },
+  {
+    "id": 1784617501254,
+    "type": "order_confirmation",
+    "to": "admin@luna.com",
+    "subject": "Order 1784617501223 is confirmed",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T07:05:01.254Z"
+  },
+  {
+    "id": 1784617506202,
+    "type": "follow_up",
+    "to": "admin@luna.com",
+    "subject": "Thank you for shopping with Beautique",
+    "variant": "modern",
+    "delivered": true,
+    "createdAt": "2026-07-21T07:05:06.202Z"
   }
 ]

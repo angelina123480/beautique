@@ -7,6 +7,7 @@ const auth = require('../lib/auth');
 const catalog = require('../lib/catalog');
 const emailService = require('../lib/emailService');
 const uploads = require('../lib/uploads');
+const rewards = require('../lib/rewards');
 
 const router = express.Router();
 
@@ -404,6 +405,10 @@ function applyProductFields(product, payload, validCategoryIds) {
   if (payload.name !== undefined) product.name = String(payload.name).trim();
   if (payload.brand !== undefined) product.brand = String(payload.brand).trim();
   if (payload.price !== undefined) product.price = Math.max(0, Number(payload.price) || 0);
+  if (payload.salePrice !== undefined) {
+    const sale = payload.salePrice === null || payload.salePrice === '' ? null : Number(payload.salePrice);
+    product.salePrice = (sale && sale > 0 && sale < product.price) ? sale : null;
+  }
   if (payload.badge !== undefined) product.badge = String(payload.badge).trim();
   if (payload.emoji !== undefined) product.emoji = String(payload.emoji).trim();
   if (payload.category !== undefined && validCategoryIds.has(payload.category)) {
@@ -463,6 +468,7 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     name: '',
     brand: '',
     price: 0,
+    salePrice: null,
     badge: '',
     emoji: '🌸',
     category: validCategoryIds.has('makeup') ? 'makeup' : (categories[0] && categories[0].id) || '',
@@ -666,12 +672,29 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
 
     product.stock -= quantity;
     product.soldOut = product.stock <= 0;
-    subtotal += product.price * quantity;
-    orderItems.push({ productId: product.id, name: product.name, quantity, price: product.price, shade });
+    const unitPrice = (typeof product.salePrice === 'number' && product.salePrice > 0 && product.salePrice < product.price)
+      ? product.salePrice
+      : product.price;
+    subtotal += unitPrice * quantity;
+    orderItems.push({ productId: product.id, name: product.name, quantity, price: unitPrice, shade });
   }
 
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
-  const total = Math.round((subtotal + shipping) * 100) / 100;
+
+  let discount = 0;
+  let redeemedTier = null;
+  if (payload.redeemTier) {
+    const tier = rewards.TIERS.find((entry) => entry.threshold === Number(payload.redeemTier));
+    const points = Number(req.user.rewardPoints) || 0;
+    const alreadyRedeemed = (req.user.redeemedTiers || []).includes(Number(payload.redeemTier));
+    if (tier && !alreadyRedeemed && points >= tier.threshold) {
+      discount = Math.round(subtotal * (tier.discount / 100) * 100) / 100;
+      redeemedTier = tier.threshold;
+    }
+  }
+
+  const total = Math.round((subtotal - discount + shipping) * 100) / 100;
+  const pointsEarned = Math.max(0, Math.floor(subtotal - discount));
   const paymentMethod = payload.paymentMethod === 'delivery' ? 'delivery' : 'online';
   const address = String(payload.address || req.user.address || '').trim();
 
@@ -682,8 +705,11 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     status: 'confirmed',
     items: orderItems,
     subtotal: Math.round(subtotal * 100) / 100,
+    discount,
+    redeemedTier,
     shipping,
     total,
+    pointsEarned,
     paymentMethod,
     address,
     createdAt: new Date().toISOString()
@@ -693,6 +719,17 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
   const orders = await store.read('orders');
   orders.push(order);
   await store.write('orders', orders);
+
+  const users = await store.read('users');
+  const userRecord = users.find((entry) => entry.id === req.user.id);
+  if (userRecord) {
+    userRecord.rewardPoints = (Number(userRecord.rewardPoints) || 0) + pointsEarned;
+    if (redeemedTier) {
+      userRecord.redeemedTiers = Array.isArray(userRecord.redeemedTiers) ? userRecord.redeemedTiers : [];
+      if (!userRecord.redeemedTiers.includes(redeemedTier)) userRecord.redeemedTiers.push(redeemedTier);
+    }
+    await store.write('users', users);
+  }
 
   const itemsSummary = orderItems
     .map((item) => '  • ' + item.quantity + ' × ' + item.name + (item.shade ? ' (' + item.shade + ')' : '') + ' ($' + item.price.toFixed(2) + ')')

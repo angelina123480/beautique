@@ -21,8 +21,15 @@
         <a class="btn btn-primary" href="/shop" style="margin-top: 8px;">Explore the collection</a>
       </div>
       <div class="grid grid-2">
-        <div class="product-art reveal" style="--tone: 340;"><span class="art-emoji">💄</span></div>
-        <div class="product-art reveal" style="--tone: 195; transform: translateY(18px);"><span class="art-emoji">🫧</span></div>
+        <% showcase.forEach(function(product, i) { %>
+          <div class="product-art reveal" style="--tone: <%= product.tone %>; <%= i === 1 ? 'transform: translateY(18px);' : '' %>">
+            <% if (product.images && product.images.length) { %>
+              <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
+            <% } else { %>
+              <span class="art-emoji"><%= product.emoji %></span>
+            <% } %>
+          </div>
+        <% }); %>
       </div>
     </div>
   </section>
@@ -36,17 +43,17 @@
     </div>
     <div class="grid grid-3">
       <div class="card reveal">
-        <span style="font-size: 34px;">🐰</span>
+        <span style="font-size: 34px; color: var(--primary);"><%- icon('leaf') %></span>
         <h3 style="font-size: 20px; margin-top: 12px;">Vegan &amp; cruelty-free</h3>
         <p class="text-muted" style="font-size: 14.5px; margin: 0;">Every formula is 100% vegan and never tested on animals. No exceptions, ever.</p>
       </div>
       <div class="card reveal">
-        <span style="font-size: 34px;">🌸</span>
+        <span style="font-size: 34px; color: var(--primary);"><%- icon('heart') %></span>
         <h3 style="font-size: 20px; margin-top: 12px;">Thoughtfully curated</h3>
         <p class="text-muted" style="font-size: 14.5px; margin: 0;">A small collection of essentials that work beautifully alone — and even better together.</p>
       </div>
       <div class="card reveal">
-        <span style="font-size: 34px;">📦</span>
+        <span style="font-size: 34px; color: var(--primary);"><%- icon('box') %></span>
         <h3 style="font-size: 20px; margin-top: 12px;">Fast &amp; easy</h3>
         <p class="text-muted" style="font-size: 14.5px; margin: 0;">Free shipping over $50, delivery within 48 hours, and easy 30-day returns.</p>
       </div>

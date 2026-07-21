@@ -21,7 +21,7 @@
     }).then(function () {
       status.textContent = 'Saved!';
       status.className = 'form-status is-success';
-      B.toast('Profile updated ✔');
+      B.toast('Profile updated');
       var pill = B.$('#deliver-pill-text');
       var address = B.$('#profile-address').value.trim();
       if (pill && address) pill.textContent = address;
@@ -117,7 +117,7 @@
   function loadOrders() {
     B.api('/api/orders').then(function (result) {
       if (!result.orders || !result.orders.length) {
-        ordersList.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">🛍️</span><h3>No orders yet</h3><p>Treat yourself — you deserve it.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
+        ordersList.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">' + window.BeautiqueIcons.bag + '</span><h3>No orders yet</h3><p>Treat yourself — you deserve it.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
         return;
       }
       ordersList.innerHTML = result.orders.map(orderHtml).join('');

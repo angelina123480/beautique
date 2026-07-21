@@ -24,6 +24,8 @@ if (fs.existsSync(dotenvPath)) {
 
 const store = require('./lib/store');
 const auth = require('./lib/auth');
+const icons = require('./lib/icons');
+const rewards = require('./lib/rewards');
 
 /* store.init() is async (it may hit Redis) and only needs to run once per
    process — cache the promise so every request just awaits the same one. */
@@ -60,6 +62,10 @@ app.locals.dateLabel = (value) => new Date(value).toLocaleDateString('en-US', {
 app.locals.dateTimeLabel = (value) => new Date(value).toLocaleString('en-US', {
   year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
 });
+app.locals.icon = (name) => icons[name] || '';
+const CATEGORY_ICONS = { makeup: 'lipstick', skincare: 'droplet', fragrance: 'perfume' };
+app.locals.categoryIcon = (categoryId) => icons[CATEGORY_ICONS[categoryId]] || icons.box;
+app.locals.rewardTiers = rewards.TIERS;
 
 app.use(logger(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());

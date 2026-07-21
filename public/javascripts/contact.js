@@ -20,7 +20,7 @@
       form.reset();
       status.textContent = result.message;
       status.className = 'form-status is-success';
-      B.toast('Message sent 💌');
+      B.toast('Message sent');
     }).catch(function (err) {
       status.textContent = err.message;
       status.className = 'form-status is-error';

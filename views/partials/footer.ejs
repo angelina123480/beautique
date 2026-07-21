@@ -22,16 +22,17 @@
         <h4>Help</h4>
         <a href="/contact">Shipping &amp; returns</a>
         <a href="/contact">Order support</a>
-        <a href="mailto:hello@lunabeauty.com">hello@lunabeauty.com</a>
+        <a href="mailto:hello@beautique.com">hello@beautique.com</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© <%= new Date().getFullYear() %> Beautique. Vegan &amp; cruelty-free, always. 🐰</span>
+      <span>© <%= new Date().getFullYear() %> Beautique. Vegan &amp; cruelty-free, always.</span>
       <span>Made with Node.js, Express &amp; EJS</span>
     </div>
   </div>
 </footer>
 
+<script src="/javascripts/icons.js?v=<%= assetVersion('javascripts/icons.js') %>"></script>
 <script src="/javascripts/app.js?v=<%= assetVersion('javascripts/app.js') %>"></script>
 <% if (typeof pageScript !== 'undefined' && pageScript) { %>
 <script src="/javascripts/<%= pageScript %>.js?v=<%= assetVersion('javascripts/' + pageScript + '.js') %>"></script>

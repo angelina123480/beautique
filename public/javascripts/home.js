@@ -13,10 +13,10 @@
 
     B.api('/api/contact', {
       method: 'POST',
-      body: { name: 'Newsletter subscriber', email: email, message: 'Please add me to the Beautique newsletter. 💌' }
+      body: { name: 'Newsletter subscriber', email: email, message: 'Please add me to the Beautique newsletter.' }
     }).then(function () {
       form.reset();
-      B.toast('Welcome to the glow list ✨');
+      B.toast('Welcome to the glow list');
     }).catch(function (err) {
       B.toast(err.message, 'error');
     });

@@ -113,7 +113,7 @@
         </div>
         <% if (!categories.length) { %>
           <div class="empty-state" style="padding: 40px 10px;">
-            <span class="empty-emoji">🗂️</span>
+            <span class="empty-emoji"><%- icon('box') %></span>
             <h3>No categories yet</h3>
           </div>
         <% } else { %>
@@ -127,7 +127,7 @@
                   <tr>
                     <td>
                       <div style="display:flex; align-items:center; gap: 12px;">
-                        <span class="product-art product-art--sm" style="--tone: <%= category.tone %>; width: 42px; border-radius: 12px;"><span class="art-emoji" style="font-size: 20px;"><%= category.emoji %></span></span>
+                        <span class="product-art product-art--sm" style="--tone: <%= category.tone %>; width: 42px; border-radius: 12px;"><span class="art-emoji" style="font-size: 20px;"><%- categoryIcon(category.id) %></span></span>
                         <div>
                           <strong><%= category.title %></strong><br>
                           <span class="text-muted" style="font-size: 12.5px;"><%= category.id %></span>
@@ -155,7 +155,7 @@
         <h3 style="font-size: 22px;">Orders</h3>
         <% if (!orders.length) { %>
           <div class="empty-state" style="padding: 40px 10px;">
-            <span class="empty-emoji">📦</span>
+            <span class="empty-emoji"><%- icon('box') %></span>
             <h3>No orders yet</h3>
           </div>
         <% } else { %>
@@ -205,7 +205,7 @@
         <h3 style="font-size: 22px;">Customer reviews</h3>
         <% if (!reviews.length) { %>
           <div class="empty-state" style="padding: 40px 10px;">
-            <span class="empty-emoji">💬</span>
+            <span class="empty-emoji"><%- icon('message') %></span>
             <h3>No reviews yet</h3>
           </div>
         <% } else { %>
@@ -237,7 +237,7 @@
         <h3 style="font-size: 22px;">Contact messages</h3>
         <% if (!messages.length) { %>
           <div class="empty-state" style="padding: 40px 10px;">
-            <span class="empty-emoji">💌</span>
+            <span class="empty-emoji"><%- icon('mail') %></span>
             <h3>No messages yet</h3>
           </div>
         <% } else { %>
@@ -261,7 +261,7 @@
     <div class="modal">
       <div class="modal-head">
         <h3 id="product-modal-title">Add new product</h3>
-        <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
       </div>
       <form id="add-product-form">
         <div class="field-row">
@@ -272,12 +272,16 @@
           <div class="field"><label>Price ($) *</label><input name="price" type="number" min="0" step="0.01" required placeholder="24.00"></div>
           <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="10"></div>
         </div>
+        <div class="field">
+          <label>Sale price ($) <span class="text-muted" style="font-weight:400;">(optional — leave blank if not on sale)</span></label>
+          <input name="salePrice" type="number" min="0" step="0.01" placeholder="e.g. 19.00">
+        </div>
         <div class="field-row">
           <div class="field">
             <label>Category</label>
             <select name="category">
               <% categories.forEach(function(category) { %>
-                <option value="<%= category.id %>"><%= category.emoji %> <%= category.title %></option>
+                <option value="<%= category.id %>"><%= category.title %></option>
               <% }); %>
             </select>
           </div>
@@ -314,7 +318,7 @@
     <div class="modal">
       <div class="modal-head">
         <h3>Add category</h3>
-        <button class="modal-close" data-close-modal type="button" aria-label="Close">✕</button>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
       </div>
       <form id="add-category-form">
         <div class="field"><label>Name *</label><input name="title" type="text" required placeholder="Haircare"></div>

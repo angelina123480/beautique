@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Saved for later</span>
+    <h1>Your wishlist</h1>
+    <p class="lead">Everything you've loved, kept in one place.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <div class="grid grid-3" id="wishlist-grid"></div>
+    <div class="empty-state" id="wishlist-empty" style="display:none;">
+      <span class="empty-emoji"><%- icon('heart') %></span>
+      <h3>Your wishlist is empty</h3>
+      <p>Tap the heart on any product to save it here.</p>
+      <a class="btn btn-soft" href="/shop">Browse the shop</a>
+    </div>
+  </section>
+
+  <%- include('partials/footer', { pageScript: 'wishlist' }) %>
+</body>
+</html>

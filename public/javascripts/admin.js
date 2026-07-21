@@ -30,7 +30,7 @@
           soldOut: row.querySelector('input[name="soldOut"]').checked
         }
       }).then(function () {
-        B.toast('Inventory updated ✔');
+        B.toast('Inventory updated');
       }).catch(function (err) {
         B.toast(err.message, 'error');
       });
@@ -77,7 +77,7 @@
         method: 'POST',
         body: { status: statusBtn.getAttribute('data-status') }
       }).then(function () {
-        B.toast('Order updated — customer notified 📬');
+        B.toast('Order updated — customer notified');
         setTimeout(function () { window.location.reload(); }, 700);
       }).catch(function (err) { B.toast(err.message, 'error'); });
       return;
@@ -144,7 +144,7 @@
         saveItem.querySelector('[data-review-edit]').style.display = '';
         saveItem.querySelector('[data-review-save]').style.display = 'none';
         saveItem.querySelector('[data-review-cancel]').style.display = 'none';
-        B.toast('Review updated ✔');
+        B.toast('Review updated');
       }).catch(function (err) { B.toast(err.message, 'error'); });
       return;
     }
@@ -191,14 +191,14 @@
     function renderImagesGrid() {
       imagesGrid.innerHTML = currentImages.map(function (url, index) {
         return '<div class="image-thumb"><img src="' + B.escapeHtml(url) + '">' +
-          '<button type="button" class="image-thumb-remove" data-remove-image="' + index + '" aria-label="Remove photo">✕</button></div>';
+          '<button type="button" class="image-thumb-remove" data-remove-image="' + index + '" aria-label="Remove photo">' + window.BeautiqueIcons.close + '</button></div>';
       }).join('');
     }
 
     function renderModelImagePreview() {
       modelImagePreview.innerHTML = currentModelImage
         ? '<div class="image-thumb"><img src="' + B.escapeHtml(currentModelImage) + '">' +
-          '<button type="button" class="image-thumb-remove" id="remove-model-image" aria-label="Remove photo">✕</button></div>'
+          '<button type="button" class="image-thumb-remove" id="remove-model-image" aria-label="Remove photo">' + window.BeautiqueIcons.close + '</button></div>'
         : '';
     }
 
@@ -286,6 +286,7 @@
       addForm.elements.name.value = product.name || '';
       addForm.elements.brand.value = product.brand || '';
       addForm.elements.price.value = product.price || 0;
+      addForm.elements.salePrice.value = product.salePrice || '';
       addForm.elements.stock.value = product.stock || 0;
       addForm.elements.category.value = product.category || 'makeup';
       addForm.elements.badge.value = product.badge || '';
@@ -306,10 +307,11 @@
         name: f.elements.name.value.trim(),
         brand: f.elements.brand.value.trim(),
         price: Number(f.elements.price.value) || 0,
+        salePrice: f.elements.salePrice.value.trim() ? Number(f.elements.salePrice.value) : null,
         stock: Number(f.elements.stock.value) || 0,
         category: f.elements.category.value,
         badge: f.elements.badge.value.trim(),
-        emoji: f.elements.emoji.value.trim() || '🌸',
+        emoji: f.elements.emoji.value.trim(),
         description: f.elements.description.value.trim(),
         images: currentImages,
         modelImage: currentModelImage
@@ -320,7 +322,7 @@
       var method = isEdit ? 'PATCH' : 'POST';
 
       B.api(url, { method: method, body: payload }).then(function () {
-        B.toast(isEdit ? 'Product updated 🎀' : 'Product added 🎀');
+        B.toast(isEdit ? 'Product updated' : 'Product added');
         setTimeout(function () { window.location.reload(); }, 700);
       }).catch(function (err) {
         setStatus(err.message, 'error');
@@ -364,7 +366,7 @@
       };
 
       B.api('/api/categories', { method: 'POST', body: payload }).then(function () {
-        B.toast('Category added 🎀');
+        B.toast('Category added');
         setTimeout(function () { window.location.reload(); }, 700);
       }).catch(function (err) {
         categoryStatus.textContent = err.message;

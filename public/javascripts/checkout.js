@@ -15,7 +15,7 @@
     var cart = B.cart.get();
 
     if (!cart.length) {
-      itemsBox.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">🛍️</span><h3>Your bag is empty</h3><p>Add something lovely before checking out.</p><a class="btn btn-primary btn-sm" href="/shop">Browse the shop</a></div>';
+      itemsBox.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">' + window.BeautiqueIcons.bag + '</span><h3>Your bag is empty</h3><p>Add something lovely before checking out.</p><a class="btn btn-primary btn-sm" href="/shop">Browse the shop</a></div>';
       B.$('#checkout-form-area').style.display = 'none';
       summaryBox.innerHTML = '';
       placeBtn.disabled = true;
@@ -28,7 +28,7 @@
     itemsBox.innerHTML = cart.map(function (item) {
       return '' +
         '<div class="cart-line">' +
-          '<span class="product-art" style="--tone:' + (Number(item.tone) || 340) + ';"><span class="art-emoji" style="font-size:26px;">' + B.escapeHtml(item.emoji || '🌸') + '</span></span>' +
+          '<span class="product-art" style="--tone:' + (Number(item.tone) || 340) + ';"><span class="art-emoji" style="font-size:26px;">' + (item.emoji ? B.escapeHtml(item.emoji) : window.BeautiqueIcons.bottle) + '</span></span>' +
           '<div class="cart-line-info">' +
             '<strong>' + B.escapeHtml(item.name) + '</strong>' +
             (item.shade ? '<span class="cart-line-price">Shade: ' + B.escapeHtml(item.shade) + '</span><br>' : '') +
@@ -46,12 +46,18 @@
 
     var subtotal = B.cart.subtotal(cart);
     var shipping = subtotal >= B.cart.FREE_SHIPPING ? 0 : B.cart.SHIPPING_FLAT;
+    var rewardBox = B.$('#apply-reward');
+    var discount = (rewardBox && rewardBox.checked) ? Math.round(subtotal * (Number(rewardBox.getAttribute('data-discount')) / 100) * 100) / 100 : 0;
 
     summaryBox.innerHTML = '' +
       '<div class="cart-totals-row"><span>Subtotal (' + B.cart.count(cart) + ' items)</span><span>' + B.money(subtotal) + '</span></div>' +
-      '<div class="cart-totals-row"><span>Shipping</span><span>' + (shipping === 0 ? 'Free ✨' : B.money(shipping)) + '</span></div>' +
-      '<div class="cart-totals-row grand"><span>Total</span><span>' + B.money(subtotal + shipping) + '</span></div>';
+      (discount > 0 ? '<div class="cart-totals-row" style="color: var(--success);"><span>Reward discount</span><span>−' + B.money(discount) + '</span></div>' : '') +
+      '<div class="cart-totals-row"><span>Shipping</span><span>' + (shipping === 0 ? 'Free' : B.money(shipping)) + '</span></div>' +
+      '<div class="cart-totals-row grand"><span>Total</span><span>' + B.money(subtotal - discount + shipping) + '</span></div>';
   }
+
+  var rewardToggle = B.$('#apply-reward');
+  if (rewardToggle) rewardToggle.addEventListener('change', render);
 
   /* Re-render after any cart mutation triggered by the shared steppers. */
   document.addEventListener('click', function (e) {
@@ -81,6 +87,8 @@
     }
 
     var paymentMethod = (B.$('.pay-option input:checked') || {}).value || 'online';
+    var rewardBox = B.$('#apply-reward');
+    var redeemTier = (rewardBox && rewardBox.checked) ? Number(rewardBox.getAttribute('data-tier')) : null;
 
     placeBtn.disabled = true;
     placeBtn.textContent = 'Placing order…';
@@ -92,16 +100,18 @@
       body: {
         items: cart.map(function (item) { return { id: item.id, quantity: item.quantity, shade: item.shade || '' }; }),
         paymentMethod: paymentMethod,
-        address: address
+        address: address,
+        redeemTier: redeemTier
       }
     }).then(function (result) {
       B.cart.clear();
       var order = result.order;
       B.$('#checkout-layout').innerHTML = '' +
         '<div class="card order-success" style="grid-column: 1 / -1;">' +
-          '<span class="success-emoji">🎉</span>' +
+          '<span class="success-emoji">' + window.BeautiqueIcons.check + '</span>' +
           '<h2>Thank you — order placed!</h2>' +
           '<p class="lead" style="margin: 0 auto 8px;">Order <strong>#' + order.id + '</strong> is confirmed. Total charged: <strong>' + B.money(order.total) + '</strong>.</p>' +
+          '<p class="text-muted">You earned <strong>' + (order.pointsEarned || 0) + ' reward points</strong> on this order.</p>' +
           '<p class="text-muted">A confirmation email is on its way to your inbox.</p>' +
           '<div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:16px;">' +
             '<a class="btn btn-primary" href="/profile">Track my order</a>' +

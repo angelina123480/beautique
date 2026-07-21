@@ -83,7 +83,12 @@
   function showImage(index) {
     if (!galleryImages.length || !galleryMainImg) return;
     galleryIndex = (index + galleryImages.length) % galleryImages.length;
-    galleryMainImg.src = galleryImages[galleryIndex];
+    var nextSrc = galleryImages[galleryIndex];
+    galleryMainImg.classList.add('is-fading');
+    setTimeout(function () {
+      galleryMainImg.src = nextSrc;
+      galleryMainImg.classList.remove('is-fading');
+    }, 160);
     if (galleryTrack) {
       Array.prototype.forEach.call(galleryTrack.children, function (el, i) {
         el.classList.toggle('is-active', i === galleryIndex);
@@ -196,6 +201,17 @@
     applyShade(shadeSwatches[0]);
   }
 
+  /* Accordion — animated expand/collapse (grid-template-rows transition in CSS) */
+  B.$$('.accordion-item').forEach(function (item) {
+    var trigger = item.querySelector('.accordion-trigger');
+    if (!trigger) return;
+    trigger.addEventListener('click', function () {
+      var isOpen = item.classList.contains('is-open');
+      item.classList.toggle('is-open', !isOpen);
+      trigger.setAttribute('aria-expanded', String(!isOpen));
+    });
+  });
+
   /* Star picker */
   var picker = B.$('#star-picker');
   var ratingInput = B.$('#review-rating');
@@ -231,7 +247,7 @@
       }).then(function () {
         status.textContent = 'Thank you! Refreshing…';
         status.className = 'form-status is-success';
-        B.toast('Review submitted 💕');
+        B.toast('Review submitted');
         setTimeout(function () { window.location.reload(); }, 900);
       }).catch(function (err) {
         status.textContent = err.message;
@@ -282,7 +298,7 @@
           item.querySelector('[data-own-review-edit]').style.display = '';
           item.querySelector('[data-own-review-save]').style.display = 'none';
           item.querySelector('[data-own-review-cancel]').style.display = 'none';
-          B.toast('Review updated ✔');
+          B.toast('Review updated');
         }).catch(function (err) { B.toast(err.message, 'error'); });
         return;
       }
