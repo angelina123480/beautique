@@ -1992,6 +1992,7 @@ img[src$="dawn-blush-peony.jpg"] {
 .matcher-status { font-size: 13.5px; min-height: 20px; color: var(--ink-soft); margin-bottom: 6px; }
 .matcher-status.is-error { color: var(--danger); }
 .matcher-status.is-warn { color: var(--gold); }
+.matcher-status.is-success { color: var(--success); }
 
 .matcher-disclaimer {
   display: flex;
@@ -2028,13 +2029,36 @@ img[src$="dawn-blush-peony.jpg"] {
 
 .matcher-consent { margin-bottom: 4px; }
 
-.matcher-remembered {
+.matcher-season-picker { display: flex; gap: 8px; margin-bottom: 12px; }
+.matcher-season-btn {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.matcher-season-btn.is-active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.matcher-remembered-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.matcher-remembered-item {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
-.matcher-remembered img {
+.matcher-remembered-item img {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -2043,8 +2067,8 @@ img[src$="dawn-blush-peony.jpg"] {
   border: 2px solid var(--surface);
   box-shadow: 0 0 0 1px var(--border);
 }
-.matcher-remembered-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
-.matcher-remembered-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.matcher-remembered-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 120px; }
+.matcher-remembered-actions { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
 
 /* --------------------------------------------------------------------------
    Responsive

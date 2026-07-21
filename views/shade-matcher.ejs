@@ -19,16 +19,10 @@
       </div>
     <% } %>
 
-    <div class="card matcher-remembered" id="matcher-remembered" style="display:none; margin-bottom: 24px;">
-      <img id="matcher-remembered-thumb" alt="Your remembered photo">
-      <div class="matcher-remembered-info">
-        <strong>Welcome back</strong>
-        <span class="text-muted">We remembered your photo from last time.</span>
-      </div>
-      <div class="matcher-remembered-actions">
-        <button type="button" class="btn btn-primary btn-sm" id="matcher-remembered-use">Use this photo</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="matcher-remembered-forget">Forget it</button>
-      </div>
+    <div class="card" id="matcher-remembered" style="display:none; margin-bottom: 24px;">
+      <h3 style="font-size: 18px; margin-bottom: 4px;">Your saved shades</h3>
+      <p class="text-muted" style="font-size: 13px; margin-bottom: 16px;">Skin tone shifts with the seasons for a lot of people — save a summer and a winter reading for a more accurate match year-round.</p>
+      <div class="matcher-remembered-grid" id="matcher-remembered-grid"></div>
     </div>
 
     <div class="grid grid-2" style="align-items: start;">
@@ -58,9 +52,13 @@
 
         <label class="filter-check matcher-consent">
           <input type="checkbox" id="matcher-remember-consent">
-          Remember my photo on this device so I can skip this step next time
+          Remember this photo on this device as my…
         </label>
-        <p class="text-muted" style="font-size: 12px; margin: 4px 0 14px;">Stored only in your browser's local storage — never uploaded or sent to our servers. You can forget it anytime.</p>
+        <div class="matcher-season-picker" id="matcher-season-picker">
+          <button type="button" class="matcher-season-btn is-active" data-season="summer">☀️ Summer shade</button>
+          <button type="button" class="matcher-season-btn" data-season="winter">❄️ Winter shade</button>
+        </div>
+        <p class="text-muted" style="font-size: 12px; margin: 4px 0 14px;">Stored only in your browser's local storage — never uploaded or sent to our servers. View or forget either one anytime from your profile.</p>
 
         <div class="matcher-frame" id="matcher-frame">
           <video id="matcher-video" playsinline muted style="display:none;"></video>
@@ -94,6 +92,7 @@
        rather not depend on a third-party CDN in production. -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="/javascripts/color-science.js?v=<%= assetVersion('javascripts/color-science.js') %>"></script>
+  <script src="/javascripts/skin-sampler.js?v=<%= assetVersion('javascripts/skin-sampler.js') %>"></script>
   <script>
     /* Server-rendered shade catalog -> plain global the page script reads.
        Swap catalog.getProducts()-derived data (see routes/index.js) for your

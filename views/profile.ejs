@@ -92,7 +92,61 @@
         <div id="orders-list"><p class="text-muted">Loading your orders…</p></div>
       </div>
     </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h3 style="font-size: 22px;">Your saved shades</h3>
+      <p class="text-muted" style="font-size: 13.5px;">Skin tone shifts with the seasons for a lot of people — save a summer and a winter reading here for a more accurate match year-round.</p>
+      <div id="saved-shades-list"></div>
+
+      <hr class="divider">
+
+      <h4 style="font-size: 16px; margin-bottom: 10px;">Save a new reading</h4>
+      <div class="grid grid-2" style="align-items: start; gap: 24px;">
+        <div>
+          <div class="matcher-season-picker" id="profile-season-picker">
+            <button type="button" class="matcher-season-btn is-active" data-season="summer">☀️ Summer shade</button>
+            <button type="button" class="matcher-season-btn" data-season="winter">❄️ Winter shade</button>
+          </div>
+
+          <div class="matcher-tabs">
+            <button type="button" class="matcher-tab is-active" data-matcher-tab="upload">Upload photo</button>
+            <button type="button" class="matcher-tab" data-matcher-tab="webcam">Use webcam</button>
+          </div>
+
+          <div id="profile-shade-panel-upload" class="matcher-panel">
+            <input type="file" id="profile-shade-file-input" accept="image/*" style="display:none;">
+            <button type="button" class="btn btn-soft btn-block" id="profile-shade-upload-btn">Choose a photo…</button>
+          </div>
+
+          <div id="profile-shade-panel-webcam" class="matcher-panel" style="display:none;">
+            <button type="button" class="btn btn-soft btn-block" id="profile-shade-webcam-start">Turn on webcam</button>
+            <button type="button" class="btn btn-primary btn-block" id="profile-shade-webcam-capture" style="display:none; margin-top:10px;">Capture photo</button>
+          </div>
+
+          <p class="text-muted" style="font-size: 12px;">Stored only in your browser's local storage — never uploaded or sent to our servers.</p>
+        </div>
+
+        <div>
+          <div class="matcher-frame" id="profile-shade-frame">
+            <video id="profile-shade-video" playsinline muted style="display:none;"></video>
+            <canvas id="profile-shade-canvas" style="display:none;"></canvas>
+            <div class="matcher-placeholder" id="profile-shade-placeholder">
+              <%- icon('user') %>
+              <span>Your photo will appear here</span>
+            </div>
+          </div>
+          <div class="matcher-status" id="profile-shade-status" role="status"></div>
+        </div>
+      </div>
+    </div>
   </section>
+
+  <!-- face-api.js: free, MIT-licensed, runs entirely client-side (no API keys,
+       no server calls) — needed here so shades can be captured and saved
+       directly from the profile page, not just on /shade-matcher. -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="/javascripts/color-science.js?v=<%= assetVersion('javascripts/color-science.js') %>"></script>
+  <script src="/javascripts/skin-sampler.js?v=<%= assetVersion('javascripts/skin-sampler.js') %>"></script>
 
   <%- include('partials/footer', { pageScript: 'profile' }) %>
 </body>

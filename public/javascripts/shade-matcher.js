@@ -1,7 +1,10 @@
-/* Shade matcher — face detection, skin sampling, and shade ranking.
+/* Shade matcher — capture UI + shade ranking. Face detection and skin
+   sampling themselves live in skin-sampler.js (shared with the profile
+   page's capture widget).
    Requires (loaded by views/shade-matcher.ejs before this file):
      - face-api.js (CDN <script>, exposes window.faceapi)
      - color-science.js (exposes window.ColorScience)
+     - skin-sampler.js (exposes window.SkinSampler)
      - window.SHADE_CATALOG — array of { productId, productName, shadeName, hex }
 
    Everything here runs in the browser. No image or pixel data ever leaves
@@ -18,13 +21,6 @@
     return Object.assign({}, shade, { lab: CS.hexToLab(shade.hex) });
   });
 
-  /* face-api.js model files — the tiny detector (~190KB) + 68-point landmark
-     net (~350KB). Loaded from face-api.js's own model repo via jsdelivr for
-     a working demo with zero setup. For production, download these two
-     model's files into /public/models and point MODEL_URL at '/models'
-     instead, so you're not depending on a third-party CDN staying up. */
-  var MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-
   var video = B.$('#matcher-video');
   var canvas = B.$('#matcher-canvas');
   var placeholder = B.$('#matcher-placeholder');
@@ -35,7 +31,6 @@
   var uploadBtn = B.$('#matcher-upload-btn');
   var fileInput = B.$('#matcher-file-input');
   var stream = null;
-  var modelsReady = null;
 
   function setStatus(message, kind) {
     statusBox.textContent = message || '';
@@ -53,23 +48,6 @@
       stopWebcam();
     });
   });
-
-  /* ---------------- Model loading (lazy, once) ---------------- */
-
-  function ensureModelsLoaded() {
-    if (modelsReady) return modelsReady;
-    setStatus('Loading face-detection model…');
-    modelsReady = Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-    ]).then(function () {
-      setStatus('');
-    }).catch(function (err) {
-      setStatus('Could not load the face-detection model — check your connection and reload.', 'error');
-      throw err;
-    });
-    return modelsReady;
-  }
 
   /* ---------------- Upload flow ---------------- */
 
@@ -141,183 +119,130 @@
 
   /* ---------------- Face detection + skin sampling ---------------- */
 
-  /* 68-point landmark layout (dlib/ibug standard):
-       0-16  jaw, 17-21 right eyebrow, 22-26 left eyebrow, 27-35 nose,
-       36-41 right eye, 42-47 left eye, 48-67 mouth.
-     There's no forehead point in this model, so we approximate two cheek
-     sample centers: for each side, blend the eye's outer-corner x with the
-     jaw's x (giving an x position under the eye, toward that side), and
-     blend the nose-base y with the jaw y (giving a y position at roughly
-     cheek height, between the nose and jawline). It's an approximation —
-     swap to MediaPipe Face Mesh (478 points, including forehead) if you
-     want tighter, more precise regions later. */
-  function cheekSampleCenters(points) {
-    var rightEyeOuter = points[36];
-    var leftEyeOuter = points[45];
-    var jawRight = points[2];
-    var jawLeft = points[14];
-    var noseBase = points[33];
-
-    return [
-      { x: (rightEyeOuter.x + jawRight.x) / 2, y: (noseBase.y + jawRight.y) / 2 },
-      { x: (leftEyeOuter.x + jawLeft.x) / 2, y: (noseBase.y + jawLeft.y) / 2 }
-    ];
-  }
-
-  /* Average RGB within a square patch, trimming the 10% of pixels furthest
-     from the initial mean — cheap protection against a stray highlight,
-     shadow, or hair strand skewing the sample. */
-  function sampleRegionColor(ctx, cx, cy, size) {
-    var half = size / 2;
-    var x = Math.max(0, Math.round(cx - half));
-    var y = Math.max(0, Math.round(cy - half));
-    var w = Math.min(size, ctx.canvas.width - x);
-    var h = Math.min(size, ctx.canvas.height - y);
-    if (w <= 0 || h <= 0) return null;
-
-    var data = ctx.getImageData(x, y, w, h).data;
-    var pixels = [];
-    for (var i = 0; i < data.length; i += 4) {
-      pixels.push({ r: data[i], g: data[i + 1], b: data[i + 2] });
-    }
-    if (!pixels.length) return null;
-
-    var mean = pixels.reduce(function (acc, p) {
-      acc.r += p.r; acc.g += p.g; acc.b += p.b;
-      return acc;
-    }, { r: 0, g: 0, b: 0 });
-    mean.r /= pixels.length; mean.g /= pixels.length; mean.b /= pixels.length;
-
-    var withDist = pixels.map(function (p) {
-      var dr = p.r - mean.r, dg = p.g - mean.g, db = p.b - mean.b;
-      return { p: p, d: dr * dr + dg * dg + db * db };
-    }).sort(function (a, b) { return a.d - b.d; });
-
-    var keep = withDist.slice(0, Math.ceil(withDist.length * 0.9));
-    var trimmed = keep.reduce(function (acc, entry) {
-      acc.r += entry.p.r; acc.g += entry.p.g; acc.b += entry.p.b;
-      return acc;
-    }, { r: 0, g: 0, b: 0 });
-
-    return {
-      r: trimmed.r / keep.length,
-      g: trimmed.g / keep.length,
-      b: trimmed.b / keep.length
-    };
-  }
-
   function runMatch() {
     resultsBox.innerHTML = '<p class="text-muted">Analyzing…</p>';
     setStatus('Detecting face…');
 
-    ensureModelsLoaded().then(function () {
-      return faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
-    }).then(function (detection) {
-      if (!detection) {
-        setStatus('We couldn’t detect a face in that photo. Try a clearer, front-facing shot with more light.', 'error');
-        resultsBox.innerHTML = emptyResultsHtml('No face detected', 'Try again with your whole face visible and good lighting.');
+    window.SkinSampler.sampleFromCanvas(canvas).then(function (result) {
+      if (!result.ok) {
+        setStatus(result.message, 'error');
+        resultsBox.innerHTML = emptyResultsHtml(
+          result.reason === 'no-face' ? 'No face detected' : 'Sampling failed',
+          'Try again with your whole face visible and good lighting.'
+        );
         return;
       }
 
-      var ctx = canvas.getContext('2d');
-      var faceSize = detection.detection.box.width;
-      var sampleSize = Math.max(12, Math.round(faceSize * 0.12));
-      var centers = cheekSampleCenters(detection.landmarks.positions);
-      var samples = centers
-        .map(function (c) { return sampleRegionColor(ctx, c.x, c.y, sampleSize); })
-        .filter(Boolean);
-
-      if (!samples.length) {
-        setStatus('Couldn’t sample skin color from that photo — try a different angle.', 'error');
-        resultsBox.innerHTML = emptyResultsHtml('Sampling failed', 'Try a photo with both cheeks clearly visible.');
-        return;
-      }
-
-      var avg = samples.reduce(function (acc, s) {
-        acc.r += s.r / samples.length;
-        acc.g += s.g / samples.length;
-        acc.b += s.b / samples.length;
-        return acc;
-      }, { r: 0, g: 0, b: 0 });
-
-      var skinLab = CS.rgbToLab(avg.r, avg.g, avg.b);
-
-      // Crude lighting sanity check on LAB lightness (0 = black, 100 = white).
-      if (skinLab.l < 30) {
+      if (result.lighting === 'dark') {
         setStatus('This photo looks quite dark — try brighter, more even lighting for a more reliable match.', 'warn');
-      } else if (skinLab.l > 88) {
+      } else if (result.lighting === 'bright') {
         setStatus('This photo looks overexposed — try softer or more indirect lighting for a more reliable match.', 'warn');
       } else {
         setStatus('');
       }
 
-      renderResults(skinLab);
-      maybeRememberPhoto(skinLab);
-    }).catch(function (err) {
-      console.error(err);
-      setStatus('Something went wrong analyzing that photo. Please try again.', 'error');
+      renderResults(result.skinLab);
+      maybeRememberPhoto(result.skinLab);
     });
   }
 
-  /* ---------------- Remember photo (opt-in, local only) ----------------
+  /* ---------------- Remember photo (opt-in, local only, per-season) ----------------
      Nothing here ever leaves the browser: it's a plain localStorage entry
-     on this device, written only if the user ticks the consent checkbox,
-     and readable/removable only by this same site in this same browser. */
+     on this device (via window.Beautique.seasonalShades, shared with the
+     profile page), written only if the user ticks the consent checkbox,
+     and readable/removable only by this same site in this same browser.
+     Skin tone shifts with tanning/season for a lot of people, so this
+     supports a separate "summer" and "winter" reading rather than one. */
 
-  var REMEMBER_KEY = 'beautiqueShadeMatcherPhoto';
   var consentBox = B.$('#matcher-remember-consent');
-  var rememberedBanner = B.$('#matcher-remembered');
-  var rememberedThumb = B.$('#matcher-remembered-thumb');
+  var seasonPicker = B.$('#matcher-season-picker');
+  var rememberedCard = B.$('#matcher-remembered');
+  var rememberedGrid = B.$('#matcher-remembered-grid');
+
+  function selectedSeason() {
+    var active = seasonPicker && seasonPicker.querySelector('.matcher-season-btn.is-active');
+    return active ? active.getAttribute('data-season') : 'summer';
+  }
+
+  if (seasonPicker) {
+    seasonPicker.addEventListener('click', function (e) {
+      var btn = e.target.closest('.matcher-season-btn');
+      if (!btn) return;
+      B.$$('.matcher-season-btn', seasonPicker).forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+    });
+  }
 
   function maybeRememberPhoto(skinLab) {
     if (!consentBox || !consentBox.checked) return;
     try {
       var photoDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+      B.seasonalShades.save(selectedSeason(), {
         photoDataUrl: photoDataUrl,
         skinLab: skinLab,
         savedAt: Date.now()
-      }));
+      });
+      renderRememberedCard();
     } catch (err) {
       // Storage full or unavailable (e.g. private browsing) — fail silently,
       // remembering the photo is a convenience, not a required step.
     }
   }
 
-  function getRememberedPhoto() {
-    try {
-      return JSON.parse(localStorage.getItem(REMEMBER_KEY) || 'null');
-    } catch (err) {
-      return null;
+  var SEASON_LABELS = { summer: '☀️ Summer', winter: '❄️ Winter' };
+
+  function renderRememberedCard() {
+    if (!rememberedCard) return;
+    var saved = B.seasonalShades.get();
+    var seasons = Object.keys(saved);
+    if (!seasons.length) {
+      rememberedCard.style.display = 'none';
+      return;
     }
+    rememberedCard.style.display = '';
+    rememberedGrid.innerHTML = seasons.map(function (season) {
+      var entry = saved[season];
+      return '' +
+        '<div class="matcher-remembered-item">' +
+          '<img src="' + entry.photoDataUrl + '" alt="Your saved ' + season + ' photo">' +
+          '<div class="matcher-remembered-info">' +
+            '<strong>' + (SEASON_LABELS[season] || season) + '</strong>' +
+            '<span class="text-muted">Saved ' + new Date(entry.savedAt).toLocaleDateString() + '</span>' +
+          '</div>' +
+          '<div class="matcher-remembered-actions">' +
+            '<button type="button" class="btn btn-primary btn-sm" data-use-season="' + season + '">Use this photo</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-forget-season="' + season + '">Forget it</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
   }
 
-  function initRememberedBanner() {
-    if (!rememberedBanner) return;
-    var saved = getRememberedPhoto();
-    if (!saved) return;
-    rememberedThumb.src = saved.photoDataUrl;
-    rememberedBanner.style.display = '';
+  if (rememberedGrid) {
+    rememberedGrid.addEventListener('click', function (e) {
+      var useBtn = e.target.closest('[data-use-season]');
+      if (useBtn) {
+        var entry = B.seasonalShades.get()[useBtn.getAttribute('data-use-season')];
+        if (!entry) return;
+        var img = new Image();
+        img.onload = function () {
+          drawToCanvas(img, img.naturalWidth, img.naturalHeight);
+          // We already have this photo's skin-tone reading saved, so we can
+          // skip re-running face detection entirely and jump straight to results.
+          setStatus('');
+          renderResults(entry.skinLab);
+        };
+        img.src = entry.photoDataUrl;
+        return;
+      }
 
-    B.$('#matcher-remembered-use').addEventListener('click', function () {
-      var img = new Image();
-      img.onload = function () {
-        drawToCanvas(img, img.naturalWidth, img.naturalHeight);
-        // We already have this photo's skin-tone reading saved, so we can
-        // skip re-running face detection entirely and jump straight to results.
-        setStatus('');
-        renderResults(saved.skinLab);
-      };
-      img.src = saved.photoDataUrl;
-    });
-
-    B.$('#matcher-remembered-forget').addEventListener('click', function () {
-      localStorage.removeItem(REMEMBER_KEY);
-      rememberedBanner.style.display = 'none';
+      var forgetBtn = e.target.closest('[data-forget-season]');
+      if (forgetBtn) {
+        B.seasonalShades.forget(forgetBtn.getAttribute('data-forget-season'));
+        renderRememberedCard();
+      }
     });
   }
 
-  initRememberedBanner();
+  renderRememberedCard();
 
   function emptyResultsHtml(title, text) {
     return '<div class="empty-state" style="padding: 40px 10px;">' +

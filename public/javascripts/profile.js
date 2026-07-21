@@ -114,19 +114,44 @@
       '</div>';
   }
 
+  var ORDERS_PAGE_SIZE = 3;
+  var allOrders = [];
+  var ordersExpanded = false;
+
+  function renderOrdersList() {
+    var visible = ordersExpanded ? allOrders : allOrders.slice(0, ORDERS_PAGE_SIZE);
+    var hiddenCount = allOrders.length - ORDERS_PAGE_SIZE;
+    var toggleHtml = '';
+    if (allOrders.length > ORDERS_PAGE_SIZE) {
+      toggleHtml = '<button type="button" class="btn btn-soft btn-block" id="orders-toggle" style="margin-top:12px;">' +
+        (ordersExpanded ? 'View less' : 'View ' + hiddenCount + ' more order' + (hiddenCount === 1 ? '' : 's')) +
+        '</button>';
+    }
+    ordersList.innerHTML = visible.map(orderHtml).join('') + toggleHtml;
+  }
+
   function loadOrders() {
     B.api('/api/orders').then(function (result) {
-      if (!result.orders || !result.orders.length) {
+      allOrders = result.orders || [];
+      if (!allOrders.length) {
         ordersList.innerHTML = '<div class="empty-state" style="padding: 40px 10px;"><span class="empty-emoji">' + window.BeautiqueIcons.bag + '</span><h3>No orders yet</h3><p>Treat yourself — you deserve it.</p><a class="btn btn-primary btn-sm" href="/shop">Start shopping</a></div>';
         return;
       }
-      ordersList.innerHTML = result.orders.map(orderHtml).join('');
+      ordersExpanded = false;
+      renderOrdersList();
     }).catch(function (err) {
       ordersList.innerHTML = '<p class="text-muted">' + B.escapeHtml(err.message) + '</p>';
     });
   }
 
   ordersList.addEventListener('click', function (e) {
+    var toggleBtn = e.target.closest('#orders-toggle');
+    if (toggleBtn) {
+      ordersExpanded = !ordersExpanded;
+      renderOrdersList();
+      return;
+    }
+
     var btn = e.target.closest('[data-cancel-order]');
     if (!btn) return;
     var orderId = btn.getAttribute('data-cancel-order');
@@ -143,4 +168,179 @@
   });
 
   loadOrders();
+
+  /* ---------------- Saved seasonal shades ----------------
+     Reads the same localStorage data the shade matcher writes (see
+     window.Beautique.seasonalShades in app.js) — purely a viewing/
+     management surface here, no face detection needed on this page. */
+  var savedShadesList = B.$('#saved-shades-list');
+  var SEASON_LABELS = { summer: '☀️ Summer', winter: '❄️ Winter' };
+
+  function renderSavedShades() {
+    if (!savedShadesList) return;
+    var saved = B.seasonalShades.get();
+    var seasons = Object.keys(saved);
+
+    if (!seasons.length) {
+      savedShadesList.innerHTML = '<div class="empty-state" style="padding: 30px 10px;">' +
+        '<span class="empty-emoji">' + window.BeautiqueIcons.bottle + '</span>' +
+        '<h3>Nothing saved yet</h3>' +
+        '<p>Save a summer or winter reading below to see it here.</p>' +
+        '</div>';
+      return;
+    }
+
+    savedShadesList.innerHTML = '<div class="matcher-remembered-grid">' + seasons.map(function (season) {
+      var entry = saved[season];
+      return '' +
+        '<div class="matcher-remembered-item">' +
+          '<img src="' + entry.photoDataUrl + '" alt="Your saved ' + season + ' photo">' +
+          '<div class="matcher-remembered-info">' +
+            '<strong>' + (SEASON_LABELS[season] || season) + '</strong>' +
+            '<span class="text-muted">Saved ' + new Date(entry.savedAt).toLocaleDateString() + '</span>' +
+          '</div>' +
+          '<div class="matcher-remembered-actions">' +
+            '<a class="btn btn-primary btn-sm" href="/shade-matcher">View matches</a>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-forget-season="' + season + '">Forget it</button>' +
+          '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
+  if (savedShadesList) {
+    savedShadesList.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-forget-season]');
+      if (!btn) return;
+      B.seasonalShades.forget(btn.getAttribute('data-forget-season'));
+      renderSavedShades();
+      B.toast('Removed');
+    });
+    renderSavedShades();
+  }
+
+  /* ---------------- Save a new reading, right from the profile ----------------
+     Mirrors the shade matcher's capture flow (see shade-matcher.js /
+     skin-sampler.js) but skips ranking against the product catalog — here
+     we only need a skin-tone reading to save into a season slot. */
+  var shadeCanvas = B.$('#profile-shade-canvas');
+  if (shadeCanvas && window.SkinSampler) {
+    var shadeVideo = B.$('#profile-shade-video');
+    var shadePlaceholder = B.$('#profile-shade-placeholder');
+    var shadeStatusBox = B.$('#profile-shade-status');
+    var shadeWebcamStart = B.$('#profile-shade-webcam-start');
+    var shadeWebcamCapture = B.$('#profile-shade-webcam-capture');
+    var shadeUploadBtn = B.$('#profile-shade-upload-btn');
+    var shadeFileInput = B.$('#profile-shade-file-input');
+    var shadeSeasonPicker = B.$('#profile-season-picker');
+    var shadeStream = null;
+
+    function setShadeStatus(message, kind) {
+      shadeStatusBox.textContent = message || '';
+      shadeStatusBox.className = 'matcher-status' + (kind ? ' is-' + kind : '');
+    }
+
+    function selectedProfileSeason() {
+      var active = shadeSeasonPicker.querySelector('.matcher-season-btn.is-active');
+      return active ? active.getAttribute('data-season') : 'summer';
+    }
+
+    shadeSeasonPicker.addEventListener('click', function (e) {
+      var btn = e.target.closest('.matcher-season-btn');
+      if (!btn) return;
+      B.$$('.matcher-season-btn', shadeSeasonPicker).forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+    });
+
+    B.$$('.matcher-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        B.$$('.matcher-tab').forEach(function (t) { t.classList.toggle('is-active', t === tab); });
+        var mode = tab.getAttribute('data-matcher-tab');
+        B.$('#profile-shade-panel-upload').style.display = mode === 'upload' ? '' : 'none';
+        B.$('#profile-shade-panel-webcam').style.display = mode === 'webcam' ? '' : 'none';
+        stopShadeWebcam();
+      });
+    });
+
+    shadeUploadBtn.addEventListener('click', function () { shadeFileInput.click(); });
+
+    shadeFileInput.addEventListener('change', function () {
+      var file = shadeFileInput.files[0];
+      if (!file) return;
+      var img = new Image();
+      img.onload = function () {
+        drawShadeToCanvas(img, img.naturalWidth, img.naturalHeight);
+        captureAndSave();
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    shadeWebcamStart.addEventListener('click', function () {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setShadeStatus('Your browser does not support webcam access. Try uploading a photo instead.', 'error');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        .then(function (mediaStream) {
+          shadeStream = mediaStream;
+          shadeVideo.srcObject = shadeStream;
+          shadeVideo.style.display = '';
+          shadeCanvas.style.display = 'none';
+          shadePlaceholder.style.display = 'none';
+          shadeVideo.play();
+          shadeWebcamStart.style.display = 'none';
+          shadeWebcamCapture.style.display = '';
+          setShadeStatus('');
+        })
+        .catch(function () {
+          setShadeStatus('Camera permission was denied or unavailable. You can upload a photo instead.', 'error');
+        });
+    });
+
+    shadeWebcamCapture.addEventListener('click', function () {
+      drawShadeToCanvas(shadeVideo, shadeVideo.videoWidth, shadeVideo.videoHeight);
+      stopShadeWebcam();
+      captureAndSave();
+    });
+
+    function stopShadeWebcam() {
+      if (shadeStream) {
+        shadeStream.getTracks().forEach(function (track) { track.stop(); });
+        shadeStream = null;
+      }
+      shadeVideo.style.display = 'none';
+      shadeWebcamStart.style.display = '';
+      shadeWebcamCapture.style.display = 'none';
+    }
+
+    function drawShadeToCanvas(source, width, height) {
+      var MAX_W = 480;
+      var scale = width > MAX_W ? MAX_W / width : 1;
+      shadeCanvas.width = Math.round(width * scale);
+      shadeCanvas.height = Math.round(height * scale);
+      shadeCanvas.getContext('2d').drawImage(source, 0, 0, shadeCanvas.width, shadeCanvas.height);
+      shadeCanvas.style.display = '';
+      shadePlaceholder.style.display = 'none';
+    }
+
+    function captureAndSave() {
+      setShadeStatus('Detecting face…');
+      window.SkinSampler.sampleFromCanvas(shadeCanvas).then(function (result) {
+        if (!result.ok) {
+          setShadeStatus(result.message, 'error');
+          return;
+        }
+        var season = selectedProfileSeason();
+        var photoDataUrl = shadeCanvas.toDataURL('image/jpeg', 0.7);
+        B.seasonalShades.save(season, { photoDataUrl: photoDataUrl, skinLab: result.skinLab, savedAt: Date.now() });
+        renderSavedShades();
+        B.toast('Saved your ' + season + ' shade');
+        if (result.lighting === 'dark') {
+          setShadeStatus('Saved — though this photo looked quite dark, so the match may be less accurate.', 'warn');
+        } else if (result.lighting === 'bright') {
+          setShadeStatus('Saved — though this photo looked overexposed, so the match may be less accurate.', 'warn');
+        } else {
+          setShadeStatus('Saved as your ' + season + ' shade.', 'success');
+        }
+      });
+    }
+  }
 })();

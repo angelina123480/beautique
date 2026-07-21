@@ -338,6 +338,40 @@
     }
   });
 
+  /* ---------------- Saved seasonal shades ----------------
+     Shared storage for the shade matcher's "remember my photo" feature —
+     up to two entries (summer/winter), each { photoDataUrl, skinLab, savedAt }.
+     Lives here (not in shade-matcher.js) so the profile page can read/manage
+     them too without loading face-api.js or the matching logic. */
+
+  var SEASONAL_SHADES_KEY = 'beautiqueShadeMatcherPhotos';
+
+  function getSeasonalShades() {
+    try {
+      var data = JSON.parse(localStorage.getItem(SEASONAL_SHADES_KEY) || '{}');
+      return (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function saveSeasonalShade(season, entry) {
+    var data = getSeasonalShades();
+    data[season] = entry;
+    try {
+      localStorage.setItem(SEASONAL_SHADES_KEY, JSON.stringify(data));
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function forgetSeasonalShade(season) {
+    var data = getSeasonalShades();
+    delete data[season];
+    localStorage.setItem(SEASONAL_SHADES_KEY, JSON.stringify(data));
+  }
+
   /* ---------------- Wishlist ---------------- */
 
   var WISHLIST_KEY = 'beautiqueWishlist';
@@ -648,6 +682,11 @@
       toggle: toggleWishlist,
       remove: removeFromWishlist
     },
-    renderWishlistState: renderWishlistState
+    renderWishlistState: renderWishlistState,
+    seasonalShades: {
+      get: getSeasonalShades,
+      save: saveSeasonalShade,
+      forget: forgetSeasonalShade
+    }
   };
 })();

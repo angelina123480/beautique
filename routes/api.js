@@ -796,6 +796,25 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
   await store.write('products', products);
   await store.write('orders', orders);
 
+  // Refund isn't a real payment-gateway transaction here (no card was ever
+  // actually charged), but the order's reward-program effects are real —
+  // reverse the points it earned, and give back any tier it redeemed so
+  // the customer isn't left worse off for a cancelled order.
+  if (order.pointsEarned || order.redeemedTier) {
+    const users = await store.read('users');
+    const userRecord = users.find((entry) => entry.id === order.userId);
+    if (userRecord) {
+      if (order.pointsEarned) {
+        userRecord.rewardPoints = Math.max(0, (Number(userRecord.rewardPoints) || 0) - order.pointsEarned);
+      }
+      if (order.redeemedTier && Array.isArray(userRecord.redeemedTiers)) {
+        const tierIndex = userRecord.redeemedTiers.indexOf(order.redeemedTier);
+        if (tierIndex !== -1) userRecord.redeemedTiers.splice(tierIndex, 1);
+      }
+      await store.write('users', users);
+    }
+  }
+
   if (order.userEmail) {
     await emailService.sendEmail('order_cancellation', order.userEmail, {
       firstName: req.user.name,
