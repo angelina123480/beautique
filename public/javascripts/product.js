@@ -198,7 +198,17 @@
     shadeSwatches.forEach(function (swatch) {
       swatch.addEventListener('click', function () { applyShade(swatch); });
     });
-    applyShade(shadeSwatches[0]);
+
+    // Deep-link from the shade matcher ("Shop this shade") — e.g.
+    // /product/7?shade=shade-08 — pre-selects that exact shade instead of
+    // defaulting to the first one.
+    var requestedShade = new URLSearchParams(window.location.search).get('shade');
+    var requested = requestedShade && shadeSwatches.find(function (s) { return s.getAttribute('data-name') === requestedShade; });
+    var initialSwatch = requested || shadeSwatches[0];
+    applyShade(initialSwatch);
+    if (requested) {
+      initialSwatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   /* Accordion — animated expand/collapse (grid-template-rows transition in CSS) */

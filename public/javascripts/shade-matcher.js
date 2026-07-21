@@ -333,17 +333,26 @@
       return;
     }
 
-    var ranked = CATALOG
-      .map(function (shade) { return Object.assign({}, shade, { distance: CS.deltaE94(skinLab, shade.lab) }); })
-      .sort(function (a, b) { return a.distance - b.distance; })
-      .slice(0, 3);
+    // One recommendation per product, not top-3 overall — otherwise a
+    // product with a deep shade range (e.g. a 22-shade foundation) would
+    // always win every slot and other product lines would never show up.
+    var bestPerProduct = new Map();
+    CATALOG.forEach(function (shade) {
+      var distance = CS.deltaE94(skinLab, shade.lab);
+      var current = bestPerProduct.get(shade.productId);
+      if (!current || distance < current.distance) {
+        bestPerProduct.set(shade.productId, Object.assign({}, shade, { distance: distance }));
+      }
+    });
+
+    var ranked = Array.from(bestPerProduct.values()).sort(function (a, b) { return a.distance - b.distance; });
 
     resultsBox.innerHTML = ranked.map(function (shade, i) {
       // Rough, non-scientific "closeness" label from the CIE94 distance —
       // under ~2 is essentially imperceptible, under ~10 reads as "close".
       var closeness = shade.distance < 5 ? 'Excellent match' : shade.distance < 12 ? 'Good match' : 'Closest available';
       return '' +
-        '<a class="matcher-result reveal" href="/product/' + shade.productId + '" style="transition-delay:' + (i * 0.08).toFixed(2) + 's;">' +
+        '<a class="matcher-result reveal" href="/product/' + shade.productId + '?shade=' + encodeURIComponent(shade.shadeSlug || '') + '" style="transition-delay:' + (i * 0.08).toFixed(2) + 's;">' +
           '<span class="matcher-swatch" style="background:' + shade.hex + ';"></span>' +
           '<span class="matcher-result-info">' +
             '<strong>' + B.escapeHtml(shade.productName) + '</strong>' +

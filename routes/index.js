@@ -165,6 +165,7 @@ router.get('/shade-matcher', ah(async (req, res) => {
         productId: product.id,
         productName: product.name,
         shadeName: shade.label,
+        shadeSlug: shade.name,
         hex: shade.color
       });
     });

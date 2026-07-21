@@ -36,6 +36,11 @@
       <div class="card">
         <h3 style="font-size: 20px;">1. Capture your photo</h3>
 
+        <div class="notice" style="display:flex; align-items:flex-start; gap:10px; margin-bottom:18px;">
+          <%- icon('alert') %>
+          <span>For best results: use natural daylight (avoid strong yellow/warm indoor bulbs), remove makeup from the sampled area if possible, and face the camera directly with your whole face in frame. Webcam lighting varies a lot from device to device, so this is a helpful starting point, not a calibrated color match — think of it as a first guess to narrow down shades worth swatching in person.</span>
+        </div>
+
         <div class="matcher-tabs">
           <button type="button" class="matcher-tab is-active" data-matcher-tab="upload">Upload photo</button>
           <button type="button" class="matcher-tab" data-matcher-tab="webcam">Use webcam</button>
@@ -67,21 +72,16 @@
         </div>
 
         <div class="matcher-status" id="matcher-status" role="status"></div>
-
-        <p class="text-muted matcher-disclaimer">
-          <%- icon('alert') %>
-          For best results: use natural daylight (avoid strong yellow/warm indoor bulbs), remove makeup from the sampled area if possible, and face the camera directly with your whole face in frame. Webcam lighting varies a lot from device to device, so this is a helpful starting point, not a calibrated color match — think of it as a first guess to narrow down shades worth swatching in person.
-        </p>
       </div>
 
       <!-- Results card -->
       <div class="card" id="matcher-results-card">
-        <h3 style="font-size: 20px;">2. Your closest shades</h3>
+        <h3 style="font-size: 20px;">2. Your best match in every product</h3>
         <div id="matcher-results">
           <div class="empty-state" style="padding: 40px 10px;">
             <span class="empty-emoji"><%- icon('lipstick') %></span>
             <h3>No photo yet</h3>
-            <p>Capture or upload a photo to see your top 3 shade matches.</p>
+            <p>Capture or upload a photo to see your best-matching shade in every product that has shades.</p>
           </div>
         </div>
       </div>
