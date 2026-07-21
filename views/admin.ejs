@@ -291,16 +291,16 @@
           <div class="field"><label>Badge</label><input name="badge" type="text" placeholder="New"></div>
         </div>
         <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="💄" maxlength="4"></div>
-        <div class="field">
-          <label>Scent family <span class="text-muted" style="font-weight:400;">(fragrances — powers the scent quiz recommendation)</span></label>
+        <div class="field" id="field-scent-family" style="display:none;">
+          <label>Scent family <span class="text-muted" style="font-weight:400;">(powers the scent quiz recommendation)</span></label>
           <div class="scent-family-checks" id="product-scent-family">
             <% scentFamilies.forEach(function(family) { %>
               <label class="filter-check"><input type="checkbox" name="scentFamily" value="<%= family.id %>"> <%= family.label %></label>
             <% }); %>
           </div>
         </div>
-        <div class="field">
-          <label>Skin goals <span class="text-muted" style="font-weight:400;">(skincare — powers the skincare quiz recommendation)</span></label>
+        <div class="field" id="field-skin-goals" style="display:none;">
+          <label>Skin goals <span class="text-muted" style="font-weight:400;">(powers the skincare quiz recommendation)</span></label>
           <div class="scent-family-checks" id="product-skin-goals">
             <% skinGoals.forEach(function(goal) { %>
               <label class="filter-check"><input type="checkbox" name="skinGoals" value="<%= goal.id %>"> <%= goal.label %></label>
@@ -321,6 +321,12 @@
           <div class="image-manager" id="product-model-image-preview"></div>
           <input type="file" id="product-model-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
           <button class="btn btn-soft btn-sm" id="product-model-image-add" type="button">+ Add model photo</button>
+        </div>
+
+        <div class="field">
+          <label>Number of shades <span class="text-muted" style="font-weight:400;">(optional — leave at 0 if this product doesn't come in shades)</span></label>
+          <input name="shadeCount" id="product-shade-count" type="number" min="0" max="24" value="0" style="max-width:120px;">
+          <div id="product-shades-rows" style="margin-top:12px;"></div>
         </div>
 
         <div class="modal-actions">

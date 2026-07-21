@@ -212,6 +212,70 @@
     var currentModelImage = '';
     var editingProductId = null;
 
+    var fieldScentFamily = B.$('#field-scent-family');
+    var fieldSkinGoals = B.$('#field-skin-goals');
+
+    /* Only fragrances have a scent family / only skincare has skin goals —
+       the quiz questions for a category are meaningless (and shouldn't be
+       collected) for products outside it. */
+    function updateCategoryFieldVisibility() {
+      var category = addForm.elements.category.value;
+      var showScent = category === 'fragrance';
+      var showSkin = category === 'skincare';
+      fieldScentFamily.style.display = showScent ? '' : 'none';
+      fieldSkinGoals.style.display = showSkin ? '' : 'none';
+      if (!showScent) {
+        B.$$('input[name="scentFamily"]', addForm).forEach(function (box) { box.checked = false; });
+      }
+      if (!showSkin) {
+        B.$$('input[name="skinGoals"]', addForm).forEach(function (box) { box.checked = false; });
+      }
+    }
+    addForm.elements.category.addEventListener('change', updateCategoryFieldVisibility);
+
+    var shadeCountInput = B.$('#product-shade-count');
+    var shadesContainer = B.$('#product-shades-rows');
+
+    function currentShadeValues() {
+      return B.$$('.shade-row', shadesContainer).map(function (row) {
+        return {
+          label: row.querySelector('[name="shadeLabel"]').value,
+          color: row.querySelector('[name="shadeColor"]').value
+        };
+      });
+    }
+
+    /* Renders exactly `count` shade rows. Not mandatory — count defaults to
+       0 and a product saves fine with no shades at all; any row left with
+       a blank name is dropped on submit rather than blocking saving. */
+    function renderShadeRows(count, prefill) {
+      var existing = prefill || currentShadeValues();
+      var rows = [];
+      for (var i = 0; i < count; i++) {
+        var val = existing[i] || { label: '', color: '#d9a08b' };
+        rows.push(
+          '<div class="field-row shade-row" data-shade-index="' + i + '">' +
+            '<div class="field"><input type="text" name="shadeLabel" placeholder="Shade name (e.g. Rose Nude)" value="' + B.escapeHtml(val.label || '') + '"></div>' +
+            '<div class="field" style="max-width:90px;"><input type="color" name="shadeColor" value="' + (val.color || '#d9a08b') + '"></div>' +
+          '</div>'
+        );
+      }
+      shadesContainer.innerHTML = rows.join('');
+    }
+
+    function collectShadeRows() {
+      return B.$$('.shade-row', shadesContainer).map(function (row) {
+        var label = row.querySelector('[name="shadeLabel"]').value.trim();
+        var color = row.querySelector('[name="shadeColor"]').value;
+        return label ? { name: label, label: label, color: color } : null;
+      }).filter(Boolean);
+    }
+
+    shadeCountInput.addEventListener('input', function () {
+      var count = Math.max(0, Math.min(24, Number(shadeCountInput.value) || 0));
+      renderShadeRows(count);
+    });
+
     function setStatus(message, kind) {
       status.textContent = message || '';
       status.className = 'form-status' + (kind ? ' is-' + kind : '');
@@ -289,6 +353,9 @@
       currentImages = [];
       currentModelImage = '';
       addForm.reset();
+      updateCategoryFieldVisibility();
+      shadeCountInput.value = 0;
+      renderShadeRows(0);
       modalTitle.textContent = 'Add new product';
       submitBtn.textContent = 'Add product';
       renderImagesGrid();
@@ -318,6 +385,7 @@
       addForm.elements.salePrice.value = product.salePrice || '';
       addForm.elements.stock.value = product.stock || 0;
       addForm.elements.category.value = product.category || 'makeup';
+      updateCategoryFieldVisibility();
       addForm.elements.badge.value = product.badge || '';
       addForm.elements.emoji.value = product.emoji || '';
       var productScentFamily = product.scentFamily || [];
@@ -328,6 +396,11 @@
       B.$$('input[name="skinGoals"]', addForm).forEach(function (box) {
         box.checked = productSkinGoals.indexOf(box.value) !== -1;
       });
+      var productShades = (product.shades || []).filter(function (s) { return s && typeof s === 'object'; });
+      shadeCountInput.value = productShades.length;
+      renderShadeRows(productShades.length, productShades.map(function (s) {
+        return { label: s.label || s.name || '', color: s.color || '#d9a08b' };
+      }));
       addForm.elements.description.value = product.description || '';
       modalTitle.textContent = 'Edit ' + product.name;
       submitBtn.textContent = 'Save changes';
@@ -351,6 +424,7 @@
         emoji: f.elements.emoji.value.trim(),
         scentFamily: B.$$('input[name="scentFamily"]:checked', f).map(function (box) { return box.value; }),
         skinGoals: B.$$('input[name="skinGoals"]:checked', f).map(function (box) { return box.value; }),
+        shades: collectShadeRows(),
         description: f.elements.description.value.trim(),
         images: currentImages,
         modelImage: currentModelImage
