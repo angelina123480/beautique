@@ -1,6 +1,6 @@
 # 🌸 Beautique
 
-A modern beauty e-commerce demo built with **Node.js, Express 4, and EJS** — no database, no build step, no frontend framework. Everything is plain JavaScript, custom CSS, and JSON files.
+A modern beauty e-commerce demo built with **Node.js, Express 4, and EJS** — no build step, no frontend framework. Everything is plain JavaScript, custom CSS, and Postgres.
 
 ## Features
 
@@ -44,7 +44,7 @@ Copy `.env.example` to `.env` (all values optional):
 
 | Variable | Purpose |
 | --- | --- |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Data storage backend. Leave both blank locally (falls back to `data/*.json` files). **Required on Vercel** — its filesystem is read-only, so JSON files don't persist there. Add an Upstash Redis integration from the Vercel Marketplace and it injects these automatically. |
+| `DATABASE_URL` | **Required.** Postgres connection string — see [Database](#database) below. |
 | `BLOB_READ_WRITE_TOKEN` | Image upload storage (admin dashboard). Leave blank locally (uploads save to `public/img/products/`). **Required on Vercel** for the same read-only-filesystem reason — add a Blob store from the Storage tab in your Vercel project and it injects this automatically. |
 | `RESEND_API_KEY` | Enables real email delivery |
 | `EMAIL_FROM` | From address for outgoing mail |
@@ -54,18 +54,37 @@ Copy `.env.example` to `.env` (all values optional):
 ## Project layout
 
 ```
-app.js               Express app: middleware, security headers, error pages
-bin/www              HTTP server bootstrap
-lib/store.js         Data layer: JSON files locally, Upstash Redis on Vercel
-lib/auth.js          Sessions, password hashing, auth middleware
-lib/catalog.js       Product decoration (ratings, availability)
-lib/emailService.js  Transactional email (Resend or dev mode)
-lib/uploads.js       Image uploads: local files locally, Vercel Blob on Vercel
-routes/index.js      Page routes (server-rendered EJS)
-routes/api.js        JSON API (auth, products, orders, reviews, contact)
-views/               EJS templates + partials
-public/              Custom design system CSS + vanilla JS modules
-data/                JSON collections (users, products, orders, …)
+app.js                Express app: middleware, security headers, error pages
+bin/www               HTTP server bootstrap
+db/schema.sql         Postgres schema (source of truth for the table structure)
+db/import.js          One-time script to load data/*.json into a fresh database
+lib/db.js             Shared Postgres connection (Neon serverless driver)
+lib/users.js          User accounts, discount codes
+lib/products.js       Products, shades, reviews
+lib/orders.js         Orders, order items
+lib/categories.js     Shop categories
+lib/sessions.js       Login sessions
+lib/messages.js       Contact-form messages
+lib/emailLog.js       Sent-email log
+lib/auth.js           Sessions, password verification, auth middleware
+lib/passwords.js      Password hashing (scrypt)
+lib/catalog.js        Product decoration (ratings, availability)
+lib/emailService.js   Transactional email (Resend or dev mode)
+lib/uploads.js        Image uploads: local files locally, Vercel Blob on Vercel
+routes/index.js       Page routes (server-rendered EJS)
+routes/api.js         JSON API (auth, products, orders, reviews, contact)
+views/                EJS templates + partials
+public/               Custom design system CSS + vanilla JS modules
+data/                 Bundled catalog data (products.json, categories.json) used by
+                      the admin "sync catalog to database" action, and db/import.js
 ```
 
-Data lives in `data/*.json` and is created/migrated automatically on first run.
+## Database
+
+All app data lives in Postgres — see `db/schema.sql` for the table structure. To set up a fresh database:
+
+1. Provision a Postgres database (e.g. Neon, or Vercel's Storage tab) and put its connection string in `.env` as `DATABASE_URL`.
+2. Apply the schema: run each statement in `db/schema.sql` against your database.
+3. Optionally seed it from the bundled demo data: `node db/import.js` (only works against an empty database — it refuses to run if `orders` already has rows, since it truncates everything first).
+
+`data/products.json` and `data/categories.json` stay in the repo on purpose — they're what the admin dashboard's "sync catalog to database" button pushes live, so editing them (or the whole catalog) can be deployed without touching the database directly.

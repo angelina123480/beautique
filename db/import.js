@@ -1,8 +1,10 @@
 'use strict';
 
 /* One-time import: reads data/*.json and inserts it into the Neon Postgres
-   tables created by db/schema.sql. Safe to re-run — it truncates every
-   table first, so a retry after a partial failure won't create duplicates. */
+   tables created by db/schema.sql. Truncates every table first, so it's
+   only safe to re-run before the app has gone live against this database —
+   once real usage exists, this would silently wipe it back to this stale
+   snapshot. Requires `--force` as a reminder to actually check that first. */
 
 const fs = require('fs');
 const path = require('path');
@@ -26,6 +28,19 @@ function readJson(name) {
 }
 
 async function main() {
+  if (!process.argv.includes('--force')) {
+    const [{ count }] = await sql`select count(*) from orders`;
+    if (Number(count) > 0) {
+      console.error(
+        `Refusing to run: "orders" already has ${count} row(s). This script truncates\n` +
+        'every table and reimports from data/*.json, which is almost certainly stale\n' +
+        'by now and would destroy real data. If you are certain you want to reset the\n' +
+        'database back to that snapshot, rerun with --force.'
+      );
+      process.exit(1);
+    }
+  }
+
   console.log('Truncating existing tables...');
   await sql.query(`TRUNCATE categories, users, user_discount_codes, products,
     product_shades, product_reviews, orders, order_items, sessions,
