@@ -16,6 +16,35 @@
     });
   });
 
+  /* Sync this deployment's bundled products+categories into the live
+     database — the only way local/repo catalog edits (e.g. added via a
+     script or a different environment) reach production, since the admin
+     panel here only ever writes to whichever store is active where it's
+     running. */
+  var syncBtn = B.$('#sync-catalog-btn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', function () {
+      B.confirmDialog(
+        'Sync catalog to database?',
+        'This overwrites the live products & categories with what\'s bundled in this deployment. Any product changes made directly on the live site since the last deploy will be replaced.'
+      ).then(function (confirmed) {
+        if (!confirmed) return;
+        syncBtn.disabled = true;
+        syncBtn.textContent = 'Syncing…';
+        B.api('/api/admin/sync-catalog', { method: 'POST' }).then(function (result) {
+          B.toast('Synced ' + result.productsCount + ' products and ' + result.categoriesCount + ' categories.');
+          syncBtn.disabled = false;
+          syncBtn.textContent = 'Sync catalog to database';
+          setTimeout(function () { window.location.reload(); }, 900);
+        }).catch(function (err) {
+          B.toast(err.message, 'error');
+          syncBtn.disabled = false;
+          syncBtn.textContent = 'Sync catalog to database';
+        });
+      });
+    });
+  }
+
   /* Save product (price / stock / sold out) */
   document.addEventListener('click', function (e) {
     var saveBtn = e.target.closest('[data-save-product]');

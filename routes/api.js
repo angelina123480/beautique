@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const store = require('../lib/store');
@@ -454,6 +456,23 @@ function applyProductFields(product, payload, validCategoryIds) {
   if (product.stock <= 0) product.soldOut = true;
   if (product.soldOut) product.stock = 0;
 }
+
+/* One-off/repeatable admin action: pushes the products+categories bundled
+   with the currently deployed code into whichever store.js backend is
+   active (Redis in production, the local files in dev) — so a catalog
+   built up locally (or edited directly in the repo) can be brought to
+   production without needing a terminal or Redis credentials at all,
+   just an admin login in the browser. Scoped to products/categories only
+   — never touches users/orders, so it can't clobber real customer data. */
+router.post('/admin/sync-catalog', auth.requireAdmin, ah(async (req, res) => {
+  const products = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'products.json'), 'utf8'));
+  const categories = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'categories.json'), 'utf8'));
+
+  await store.write('products', products);
+  await store.write('categories', categories);
+
+  res.json({ ok: true, productsCount: products.length, categoriesCount: categories.length });
+}));
 
 router.post('/products', auth.requireAdmin, ah(async (req, res) => {
   const payload = req.body || {};
