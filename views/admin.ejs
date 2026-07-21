@@ -291,6 +291,22 @@
           <div class="field"><label>Badge</label><input name="badge" type="text" placeholder="New"></div>
         </div>
         <div class="field"><label>Emoji</label><input name="emoji" type="text" placeholder="💄" maxlength="4"></div>
+        <div class="field">
+          <label>Scent family <span class="text-muted" style="font-weight:400;">(fragrances — powers the scent quiz recommendation)</span></label>
+          <div class="scent-family-checks" id="product-scent-family">
+            <% scentFamilies.forEach(function(family) { %>
+              <label class="filter-check"><input type="checkbox" name="scentFamily" value="<%= family.id %>"> <%= family.label %></label>
+            <% }); %>
+          </div>
+        </div>
+        <div class="field">
+          <label>Skin goals <span class="text-muted" style="font-weight:400;">(skincare — powers the skincare quiz recommendation)</span></label>
+          <div class="scent-family-checks" id="product-skin-goals">
+            <% skinGoals.forEach(function(goal) { %>
+              <label class="filter-check"><input type="checkbox" name="skinGoals" value="<%= goal.id %>"> <%= goal.label %></label>
+            <% }); %>
+          </div>
+        </div>
         <div class="field"><label>Description *</label><textarea name="description" required placeholder="A soft matte finish with lasting comfort."></textarea></div>
 
         <div class="field">

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Scent quiz</span>
+    <h1>Find your signature scent</h1>
+    <p class="lead">Answer a few quick questions about your vibe, and we'll match you to a fragrance from our collection — no notes memorized required.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <% if (!fragrances.length) { %>
+      <div class="notice" style="margin-bottom: 24px; max-width: 640px; margin-left:auto; margin-right:auto;">
+        No fragrance products are available to recommend right now. Add one (with a scent family) in the admin panel first.
+      </div>
+    <% } %>
+    <div class="card" id="quiz-card" style="max-width: 640px; margin: 0 auto;"></div>
+  </section>
+
+  <script>
+    /* Server-rendered fragrance catalog -> plain global the page script
+       reads. Swap catalog.getProducts()-derived data (see routes/index.js)
+       for your real product/scent data source whenever it changes. */
+    window.FRAGRANCE_CATALOG = <%- JSON.stringify(fragrances) %>;
+  </script>
+
+  <%- include('partials/footer', { pageScript: 'fragrance-quiz' }) %>
+</body>
+</html>

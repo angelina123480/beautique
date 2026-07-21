@@ -14,7 +14,14 @@
     <nav class="main-nav" aria-label="Main navigation">
       <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
       <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
-      <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Match</a>
+      <div class="nav-item-dropdown">
+        <span class="nav-dropdown-trigger <%= ['shade-matcher', 'fragrance-quiz', 'skincare-quiz'].indexOf(menuId) !== -1 ? 'is-active' : '' %>" tabindex="0">Quizzes</span>
+        <div class="nav-dropdown-panel">
+          <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Matcher</a>
+          <a href="/fragrance-quiz" class="<%= menuId === 'fragrance-quiz' ? 'is-active' : '' %>">Scent Quiz</a>
+          <a href="/skincare-quiz" class="<%= menuId === 'skincare-quiz' ? 'is-active' : '' %>">Skincare Quiz</a>
+        </div>
+      </div>
       <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
       <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
       <% if (user && user.role === 'admin') { %>
@@ -46,7 +53,10 @@
   <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
     <a href="/" class="<%= menuId === 'home' ? 'is-active' : '' %>">Home</a>
     <a href="/shop" class="<%= menuId === 'shop' ? 'is-active' : '' %>">Shop</a>
-    <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Match</a>
+    <span class="mobile-nav-label">Quizzes</span>
+    <a href="/shade-matcher" class="<%= menuId === 'shade-matcher' ? 'is-active' : '' %>">Shade Matcher</a>
+    <a href="/fragrance-quiz" class="<%= menuId === 'fragrance-quiz' ? 'is-active' : '' %>">Scent Quiz</a>
+    <a href="/skincare-quiz" class="<%= menuId === 'skincare-quiz' ? 'is-active' : '' %>">Skincare Quiz</a>
     <a href="/about" class="<%= menuId === 'about' ? 'is-active' : '' %>">About</a>
     <a href="/contact" class="<%= menuId === 'contact' ? 'is-active' : '' %>">Contact</a>
     <% if (user && user.role === 'admin') { %>

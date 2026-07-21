@@ -173,6 +173,55 @@ router.get('/shade-matcher', ah(async (req, res) => {
   res.render('shade-matcher', { page: 'Shade Matcher', menuId: 'shade-matcher', shadeCatalog });
 }));
 
+/* Fragrance quiz catalog — every fragrance-category product with its
+   scent-family tags (set in the admin panel). The quiz itself (questions,
+   tag weighting) is static content that lives client-side in
+   fragrance-quiz.js; this route only supplies the real, current product
+   data to score against. */
+router.get('/fragrance-quiz', ah(async (req, res) => {
+  const products = await catalog.getProducts();
+  const fragrances = products
+    .filter((product) => product.category === 'fragrance' && product.available)
+    .map((product) => ({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      description: product.description,
+      price: product.price,
+      effectivePrice: product.effectivePrice,
+      onSale: product.onSale,
+      discountPercent: product.discountPercent,
+      image: (product.images && product.images[0]) || '',
+      emoji: product.emoji,
+      tone: product.tone,
+      scentFamily: product.scentFamily || []
+    }));
+  res.render('fragrance-quiz', { page: 'Scent Quiz', menuId: 'fragrance-quiz', fragrances });
+}));
+
+/* Skincare quiz catalog — same idea as the fragrance quiz, scored against
+   skinGoals tags (set in the admin panel) instead of scentFamily. */
+router.get('/skincare-quiz', ah(async (req, res) => {
+  const products = await catalog.getProducts();
+  const skincareProducts = products
+    .filter((product) => product.category === 'skincare' && product.available)
+    .map((product) => ({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      description: product.description,
+      price: product.price,
+      effectivePrice: product.effectivePrice,
+      onSale: product.onSale,
+      discountPercent: product.discountPercent,
+      image: (product.images && product.images[0]) || '',
+      emoji: product.emoji,
+      tone: product.tone,
+      skinGoals: product.skinGoals || []
+    }));
+  res.render('skincare-quiz', { page: 'Skincare Quiz', menuId: 'skincare-quiz', skincareProducts });
+}));
+
 router.get('/product/:id', ah(async (req, res, next) => {
   const product = await catalog.findProduct(req.params.id);
   if (!product) {

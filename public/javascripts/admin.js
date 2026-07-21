@@ -320,6 +320,14 @@
       addForm.elements.category.value = product.category || 'makeup';
       addForm.elements.badge.value = product.badge || '';
       addForm.elements.emoji.value = product.emoji || '';
+      var productScentFamily = product.scentFamily || [];
+      B.$$('input[name="scentFamily"]', addForm).forEach(function (box) {
+        box.checked = productScentFamily.indexOf(box.value) !== -1;
+      });
+      var productSkinGoals = product.skinGoals || [];
+      B.$$('input[name="skinGoals"]', addForm).forEach(function (box) {
+        box.checked = productSkinGoals.indexOf(box.value) !== -1;
+      });
       addForm.elements.description.value = product.description || '';
       modalTitle.textContent = 'Edit ' + product.name;
       submitBtn.textContent = 'Save changes';
@@ -341,6 +349,8 @@
         category: f.elements.category.value,
         badge: f.elements.badge.value.trim(),
         emoji: f.elements.emoji.value.trim(),
+        scentFamily: B.$$('input[name="scentFamily"]:checked', f).map(function (box) { return box.value; }),
+        skinGoals: B.$$('input[name="skinGoals"]:checked', f).map(function (box) { return box.value; }),
         description: f.elements.description.value.trim(),
         images: currentImages,
         modelImage: currentModelImage

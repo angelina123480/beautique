@@ -66,7 +66,12 @@
     "reviews": [],
     "category": "skincare",
     "tone": 35,
-    "shades": []
+    "shades": [],
+    "skinGoals": [
+      "glow",
+      "hydration",
+      "brightening"
+    ]
   },
   {
     "id": 3,
@@ -167,7 +172,10 @@
     "reviews": [],
     "category": "skincare",
     "tone": 195,
-    "shades": []
+    "shades": [],
+    "skinGoals": [
+      "hydration"
+    ]
   },
   {
     "id": 6,
@@ -187,7 +195,11 @@
     "category": "fragrance",
     "tone": 45,
     "shades": [],
-    "salePrice": 35
+    "salePrice": 35,
+    "scentFamily": [
+      "floral",
+      "fresh"
+    ]
   },
   {
     "id": 7,
@@ -380,5 +392,29 @@
         "color": "#B87F4A"
       }
     ]
+  },
+  {
+    "id": 9,
+    "name": "Vanilla perfume",
+    "brand": "luna",
+    "price": 45,
+    "salePrice": null,
+    "badge": "",
+    "emoji": "",
+    "category": "fragrance",
+    "tone": 238,
+    "description": "Warm Vanilla Perfume wraps skin in a cozy blend of creamy vanilla, soft musk, and a hint of warmth — a sweet, comforting scent that lingers beautifully all day.",
+    "stock": 10,
+    "soldOut": false,
+    "images": [
+      "/img/products/e666406a3c14f51a.jpg"
+    ],
+    "modelImage": "",
+    "reviews": [],
+    "scentFamily": [
+      "gourmand"
+    ],
+    "skinGoals": [],
+    "shades": []
   }
 ]

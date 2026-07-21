@@ -100,6 +100,28 @@
       <p class="text-muted" style="margin-bottom: 22px;"><%= products.length %> result<%= products.length === 1 ? '' : 's' %> for “<%= searchTerm %>”</p>
     <% } %>
 
+    <% if (activeCategory === 'fragrance') { %>
+      <a href="/fragrance-quiz" class="quiz-teaser reveal" style="margin-bottom: 28px; padding: 24px 28px;">
+        <div>
+          <span class="eyebrow">2-minute quiz</span>
+          <h3 style="font-size: 19px;">Not sure which scent is you?</h3>
+          <p style="font-size: 13.5px;">Take our scent quiz for a personalized match.</p>
+        </div>
+        <span class="btn btn-primary btn-sm">Take the quiz →</span>
+      </a>
+    <% } %>
+
+    <% if (activeCategory === 'skincare') { %>
+      <a href="/skincare-quiz" class="quiz-teaser reveal" style="margin-bottom: 28px; padding: 24px 28px;">
+        <div>
+          <span class="eyebrow">2-minute quiz</span>
+          <h3 style="font-size: 19px;">Not sure which product is right for you?</h3>
+          <p style="font-size: 13.5px;">Take our skincare quiz for a goal-based recommendation.</p>
+        </div>
+        <span class="btn btn-primary btn-sm">Take the quiz →</span>
+      </a>
+    <% } %>
+
     <% if (products.length === 0) { %>
       <div class="empty-state">
         <span class="empty-emoji"><%- icon('search') %></span>

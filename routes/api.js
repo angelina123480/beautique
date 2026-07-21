@@ -10,6 +10,11 @@ const catalog = require('../lib/catalog');
 const emailService = require('../lib/emailService');
 const uploads = require('../lib/uploads');
 const rewards = require('../lib/rewards');
+const scents = require('../lib/scents');
+const skinGoals = require('../lib/skin-goals');
+
+const SCENT_FAMILIES = new Set(scents.SCENT_FAMILIES.map((entry) => entry.id));
+const SKIN_GOALS = new Set(skinGoals.SKIN_GOALS.map((entry) => entry.id));
 
 const router = express.Router();
 
@@ -451,6 +456,12 @@ function applyProductFields(product, payload, validCategoryIds) {
   }
   if (payload.winkMap !== undefined && payload.winkMap && typeof payload.winkMap === 'object' && !Array.isArray(payload.winkMap)) {
     product.winkMap = payload.winkMap;
+  }
+  if (payload.scentFamily !== undefined && Array.isArray(payload.scentFamily)) {
+    product.scentFamily = payload.scentFamily.map(String).filter((tag) => SCENT_FAMILIES.has(tag));
+  }
+  if (payload.skinGoals !== undefined && Array.isArray(payload.skinGoals)) {
+    product.skinGoals = payload.skinGoals.map(String).filter((tag) => SKIN_GOALS.has(tag));
   }
   if (payload.modelImage !== undefined) product.modelImage = String(payload.modelImage).trim();
   if (product.stock <= 0) product.soldOut = true;

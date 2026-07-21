@@ -26,6 +26,8 @@ const store = require('./lib/store');
 const auth = require('./lib/auth');
 const icons = require('./lib/icons');
 const rewards = require('./lib/rewards');
+const scents = require('./lib/scents');
+const skinGoals = require('./lib/skin-goals');
 
 /* store.init() is async (it may hit Redis) and only needs to run once per
    process — cache the promise so every request just awaits the same one. */
@@ -66,6 +68,8 @@ app.locals.icon = (name) => icons[name] || '';
 const CATEGORY_ICONS = { makeup: 'lipstick', skincare: 'droplet', fragrance: 'perfume' };
 app.locals.categoryIcon = (categoryId) => icons[CATEGORY_ICONS[categoryId]] || icons.box;
 app.locals.rewardTiers = rewards.TIERS;
+app.locals.scentFamilies = scents.SCENT_FAMILIES;
+app.locals.skinGoals = skinGoals.SKIN_GOALS;
 
 app.use(logger(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());

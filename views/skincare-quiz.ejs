@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div class="container page-head">
+    <span class="eyebrow">Skincare quiz</span>
+    <h1>Find your routine</h1>
+    <p class="lead">Tell us your skin goals — hydration, anti-aging, glow, and more — and we'll recommend a product from our collection.</p>
+  </div>
+
+  <section class="container" style="padding-bottom: 72px;">
+    <% if (!skincareProducts.length) { %>
+      <div class="notice" style="margin-bottom: 24px; max-width: 640px; margin-left:auto; margin-right:auto;">
+        No skincare products are available to recommend right now. Add one (with skin goals) in the admin panel first.
+      </div>
+    <% } %>
+    <div class="card" id="quiz-card" style="max-width: 640px; margin: 0 auto;"></div>
+  </section>
+
+  <script>
+    /* Server-rendered skincare catalog -> plain global the page script
+       reads. Swap catalog.getProducts()-derived data (see routes/index.js)
+       for your real product/goal data source whenever it changes. */
+    window.SKINCARE_CATALOG = <%- JSON.stringify(skincareProducts) %>;
+  </script>
+
+  <%- include('partials/footer', { pageScript: 'skincare-quiz' }) %>
+</body>
+</html>
