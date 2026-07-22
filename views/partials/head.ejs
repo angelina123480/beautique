@@ -1,8 +1,32 @@
+<%
+  var metaDescription = typeof ogDescription !== 'undefined' && ogDescription
+    ? ogDescription
+    : 'Beautique — radiant makeup, nourishing skincare, and elegant scents in one curated beauty destination.';
+  /* No branded placeholder image ships in this repo — rather than pointing
+     og:image at something generic/misleading, the tag is only emitted when
+     a real photo (e.g. a product's own image) is actually passed in. */
+  var metaImage = typeof ogImage !== 'undefined' && ogImage
+    ? (ogImage.indexOf('http') === 0 ? ogImage : siteUrl + ogImage)
+    : null;
+  var metaType = typeof ogType !== 'undefined' && ogType ? ogType : 'website';
+%>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beautique — <%= page %></title>
-<meta name="description" content="Beautique — radiant makeup, nourishing skincare, and elegant scents in one curated beauty destination.">
+<meta name="description" content="<%= metaDescription %>">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E">
+
+<meta property="og:site_name" content="Beautique">
+<meta property="og:type" content="<%= metaType %>">
+<meta property="og:title" content="Beautique — <%= page %>">
+<meta property="og:description" content="<%= metaDescription %>">
+<% if (metaImage) { %><meta property="og:image" content="<%= metaImage %>"><% } %>
+<meta property="og:url" content="<%= siteUrl %><%= typeof currentPath !== 'undefined' ? currentPath : '' %>">
+<meta name="twitter:card" content="<%= metaImage ? 'summary_large_image' : 'summary' %>">
+<meta name="twitter:title" content="Beautique — <%= page %>">
+<meta name="twitter:description" content="<%= metaDescription %>">
+<% if (metaImage) { %><meta name="twitter:image" content="<%= metaImage %>"><% } %>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

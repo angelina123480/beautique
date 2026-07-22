@@ -5,6 +5,7 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const passwords = require('../lib/passwords');
+const rateLimit = require('../lib/rateLimit');
 const db = require('../lib/db');
 const auth = require('../lib/auth');
 const catalog = require('../lib/catalog');
@@ -179,11 +180,20 @@ router.post('/auth/signup', ah(async (req, res) => {
 router.post('/auth/signin', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
+  const emailKey = 'signin:email:' + email;
+  const ipKey = 'signin:ip:' + req.ip;
+
+  if ((await rateLimit.isLimited(emailKey)) || (await rateLimit.isLimited(ipKey, { max: 20 }))) {
+    return res.status(429).json({ ok: false, message: 'Too many sign-in attempts. Please wait a few minutes and try again.' });
+  }
+
   const user = await users.getUserByEmail(email);
 
   if (!user || !passwords.verifyPassword(String(payload.password || ''), user.password)) {
+    await Promise.all([rateLimit.recordAttempt(emailKey), rateLimit.recordAttempt(ipKey)]);
     return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
   }
+  await rateLimit.clearAttempts(emailKey);
 
   if (!user.otpVerified) {
     const devOtp = await issueOtp(user);
@@ -197,17 +207,25 @@ router.post('/auth/signin', ah(async (req, res) => {
 router.post('/auth/verify-otp', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
+  const otpKey = 'otp:email:' + email;
+
+  if (await rateLimit.isLimited(otpKey, { max: 8 })) {
+    return res.status(429).json({ ok: false, message: 'Too many attempts. Please request a new code.' });
+  }
+
   const user = await users.getUserByEmail(email);
 
   if (!user) {
     return res.status(404).json({ ok: false, message: 'No account found for that email.' });
   }
   if (!user.otp || String(user.otp) !== String(payload.otp || '').trim()) {
+    await rateLimit.recordAttempt(otpKey);
     return res.status(401).json({ ok: false, message: 'That code is not valid. Please try again.' });
   }
   if (user.otpExpires && new Date(user.otpExpires).getTime() < Date.now()) {
     return res.status(401).json({ ok: false, message: 'That code has expired. Request a new one.' });
   }
+  await rateLimit.clearAttempts(otpKey);
 
   await users.updateUser(user.id, { otpVerified: true, otp: '', otpExpires: null });
 
@@ -217,47 +235,69 @@ router.post('/auth/verify-otp', ah(async (req, res) => {
 
 router.post('/auth/resend-otp', ah(async (req, res) => {
   const email = normalizeEmail((req.body || {}).email);
+  const key = 'resend-otp:email:' + email;
+  const generic = { ok: true, message: 'If a verification is pending, a new code has been sent.' };
+
+  if (await rateLimit.isLimited(key, { max: 3 })) {
+    return res.json(generic);
+  }
+
   const user = await users.getUserByEmail(email);
 
   if (!user || user.otpVerified) {
     // Do not reveal whether the account exists.
-    return res.json({ ok: true, message: 'If a verification is pending, a new code has been sent.' });
+    return res.json(generic);
   }
 
+  await rateLimit.recordAttempt(key);
   const devOtp = await issueOtp(user);
   res.json({ ok: true, message: 'A new code is on its way.', devOtp });
 }));
 
 router.post('/auth/forgot-password', ah(async (req, res) => {
   const email = normalizeEmail((req.body || {}).email);
+  const key = 'forgot-password:email:' + email;
+  const generic = { ok: true, message: 'If an account exists for that email, a reset code is on its way.' };
+
+  if (await rateLimit.isLimited(key, { max: 3 })) {
+    return res.json(generic);
+  }
+
   const user = await users.getUserByEmail(email);
 
   if (!user) {
     // Do not reveal whether the account exists.
-    return res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.' });
+    return res.json(generic);
   }
 
+  await rateLimit.recordAttempt(key);
   const devOtp = await issueResetOtp(user);
-  res.json({ ok: true, message: 'If an account exists for that email, a reset code is on its way.', devOtp });
+  res.json(Object.assign({}, generic, { devOtp }));
 }));
 
 router.post('/auth/reset-password', ah(async (req, res) => {
   const payload = req.body || {};
   const email = normalizeEmail(payload.email);
   const password = String(payload.password || '');
+  const key = 'reset-password:email:' + email;
 
   if (!isStrongPassword(password)) {
     return res.status(400).json({ ok: false, message: PASSWORD_REQUIREMENT_MESSAGE });
+  }
+  if (await rateLimit.isLimited(key, { max: 8 })) {
+    return res.status(429).json({ ok: false, message: 'Too many attempts. Please request a new code.' });
   }
 
   const user = await users.getUserByEmail(email);
 
   if (!user || !user.resetOtp || String(user.resetOtp) !== String(payload.otp || '').trim()) {
+    await rateLimit.recordAttempt(key);
     return res.status(401).json({ ok: false, message: 'That code is not valid. Please try again.' });
   }
   if (user.resetOtpExpires && new Date(user.resetOtpExpires).getTime() < Date.now()) {
     return res.status(401).json({ ok: false, message: 'That code has expired. Request a new one.' });
   }
+  await rateLimit.clearAttempts(key);
 
   await users.updateUser(user.id, { password: passwords.hashPassword(password), resetOtp: '', resetOtpExpires: null });
 
@@ -387,6 +427,33 @@ router.delete('/categories/:id', auth.requireAdmin, ah(async (req, res) => {
 
 router.get('/products', ah(async (req, res) => {
   res.json({ ok: true, products: await catalog.getProducts() });
+}));
+
+/* Powers the "frequently bought together" strip in the cart drawer — the
+   cart itself lives entirely client-side (localStorage), so it has no way
+   to compute this on its own. */
+router.get('/products/:id/frequently-bought', ah(async (req, res) => {
+  const product = await catalog.findProduct(req.params.id);
+  if (!product) {
+    return res.status(404).json({ ok: false, message: 'Product not found.' });
+  }
+  const limit = Math.min(8, Math.max(1, Number(req.query.limit) || 4));
+  const suggestions = await catalog.frequentlyBoughtWith(product, limit);
+  res.json({ ok: true, products: suggestions });
+}));
+
+/* Powers the shop page's "Recommended for you" strip — based on the most
+   recently viewed product (tracked client-side, see recently-viewed.js),
+   so it's only ever shown once there's an actual signal to personalize
+   from, rather than relabeling a generic bestseller list as "for you". */
+router.get('/products/:id/related', ah(async (req, res) => {
+  const product = await catalog.findProduct(req.params.id);
+  if (!product) {
+    return res.status(404).json({ ok: false, message: 'Product not found.' });
+  }
+  const limit = Math.min(8, Math.max(1, Number(req.query.limit) || 4));
+  const suggestions = await catalog.relatedProducts(product, limit);
+  res.json({ ok: true, products: suggestions });
 }));
 
 router.post('/uploads', auth.requireAdmin, uploadSingleImage, ah(async (req, res) => {

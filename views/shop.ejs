@@ -7,9 +7,9 @@
   <%- include('partials/header') %>
 
   <div class="container page-head">
-    <span class="eyebrow">The collection</span>
-    <h1>Shop</h1>
-    <p class="lead">Curated cosmetics for a fresh, confident look — every single day.</p>
+    <span class="eyebrow">Shop the collection</span>
+    <h1>Everything for your everyday glow.</h1>
+    <p class="lead">Makeup, skincare, and scent — each one picked because it earns a place in your routine, not just your cart.</p>
   </div>
 
   <section class="container" style="padding-bottom: 72px;">
@@ -19,7 +19,10 @@
     <% var qsRating = activeRating ? '&rating=' + activeRating : ''; %>
     <% var qsInStock = activeInStock ? '&inStock=1' : ''; %>
     <% var qsOnSale = activeOnSale ? '&onSale=1' : ''; %>
-    <% var qsExtra = qsSort + qsSearch + qsPrice + qsRating + qsInStock + qsOnSale; %>
+    <% var qsBrand = activeBrand ? '&brand=' + encodeURIComponent(activeBrand) : ''; %>
+    <% var qsScent = activeScentFamily ? '&scentFamily=' + activeScentFamily : ''; %>
+    <% var qsSkin = activeSkinGoal ? '&skinGoal=' + activeSkinGoal : ''; %>
+    <% var qsExtra = qsSort + qsSearch + qsPrice + qsRating + qsInStock + qsOnSale + qsBrand + qsScent + qsSkin; %>
 
     <div class="shop-toolbar">
       <form class="search-box" id="shop-search-form" method="get" action="/shop">
@@ -30,6 +33,9 @@
         <% if (activeRating) { %><input type="hidden" name="rating" value="<%= activeRating %>"><% } %>
         <% if (activeInStock) { %><input type="hidden" name="inStock" value="1"><% } %>
         <% if (activeOnSale) { %><input type="hidden" name="onSale" value="1"><% } %>
+        <% if (activeBrand) { %><input type="hidden" name="brand" value="<%= activeBrand %>"><% } %>
+        <% if (activeScentFamily) { %><input type="hidden" name="scentFamily" value="<%= activeScentFamily %>"><% } %>
+        <% if (activeSkinGoal) { %><input type="hidden" name="skinGoal" value="<%= activeSkinGoal %>"><% } %>
         <button type="submit" aria-label="Search"><%- icon('search') %></button>
       </form>
 
@@ -48,6 +54,9 @@
         <% if (activeRating) { %><input type="hidden" name="rating" value="<%= activeRating %>"><% } %>
         <% if (activeInStock) { %><input type="hidden" name="inStock" value="1"><% } %>
         <% if (activeOnSale) { %><input type="hidden" name="onSale" value="1"><% } %>
+        <% if (activeBrand) { %><input type="hidden" name="brand" value="<%= activeBrand %>"><% } %>
+        <% if (activeScentFamily) { %><input type="hidden" name="scentFamily" value="<%= activeScentFamily %>"><% } %>
+        <% if (activeSkinGoal) { %><input type="hidden" name="skinGoal" value="<%= activeSkinGoal %>"><% } %>
         <select class="select-pill" name="sort" id="shop-sort" aria-label="Sort products">
           <option value="featured" <%= activeSort === 'featured' ? 'selected' : '' %>>Sort: Featured</option>
           <option value="price-asc" <%= activeSort === 'price-asc' ? 'selected' : '' %>>Price: low → high</option>
@@ -77,6 +86,31 @@
         <option value="3" <%= activeRating === '3' ? 'selected' : '' %>>3★ &amp; up</option>
       </select>
 
+      <select class="select-pill" name="brand" id="shop-filter-brand" aria-label="Filter by brand">
+        <option value="">Any brand</option>
+        <% brands.forEach(function(b) { %>
+          <option value="<%= b %>" <%= activeBrand === b ? 'selected' : '' %>><%= b %></option>
+        <% }); %>
+      </select>
+
+      <% if (!activeCategory || activeCategory === 'fragrance') { %>
+        <select class="select-pill" name="scentFamily" id="shop-filter-scent" aria-label="Filter by scent family">
+          <option value="">Any scent</option>
+          <% scentFamilies.forEach(function(s) { %>
+            <option value="<%= s.id %>" <%= activeScentFamily === s.id ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      <% } %>
+
+      <% if (!activeCategory || activeCategory === 'skincare') { %>
+        <select class="select-pill" name="skinGoal" id="shop-filter-skin" aria-label="Filter by skin goal">
+          <option value="">Any skin goal</option>
+          <% skinGoals.forEach(function(s) { %>
+            <option value="<%= s.id %>" <%= activeSkinGoal === s.id ? 'selected' : '' %>><%= s.label %></option>
+          <% }); %>
+        </select>
+      <% } %>
+
       <label class="filter-check">
         <input type="checkbox" name="inStock" id="shop-filter-instock" value="1" <%= activeInStock ? 'checked' : '' %>>
         In stock only
@@ -87,7 +121,7 @@
         On sale only
       </label>
 
-      <% if (activePrice || activeRating || activeInStock || activeOnSale) { %>
+      <% if (activePrice || activeRating || activeInStock || activeOnSale || activeBrand || activeScentFamily || activeSkinGoal) { %>
         <% var keepParams = []; %>
         <% if (activeCategory) { keepParams.push('category=' + activeCategory); } %>
         <% if (searchTerm) { keepParams.push('search=' + encodeURIComponent(searchTerm)); } %>
@@ -98,6 +132,17 @@
 
     <% if (searchTerm) { %>
       <p class="text-muted" style="margin-bottom: 22px;"><%= products.length %> result<%= products.length === 1 ? '' : 's' %> for “<%= searchTerm %>”</p>
+    <% } %>
+
+    <% if (activeCategory === 'makeup') { %>
+      <a href="/shade-matcher" class="quiz-teaser reveal" style="margin-bottom: 28px; padding: 24px 28px;">
+        <div>
+          <span class="eyebrow">2-minute quiz</span>
+          <h3 style="font-size: 19px;">Not sure which shade is yours?</h3>
+          <p style="font-size: 13.5px;">Use our shade matcher for a personalized match, then shop it directly.</p>
+        </div>
+        <span class="btn btn-primary btn-sm">Find your shade →</span>
+      </a>
     <% } %>
 
     <% if (activeCategory === 'fragrance') { %>
@@ -136,8 +181,20 @@
         <% }); %>
       </div>
     <% } %>
+
+    <section id="recommended-for-you" style="display:none; margin-top: 56px;">
+      <h2 style="font-size: 22px; margin-bottom: 20px;">Recommended for you</h2>
+      <div class="grid grid-3" id="recommended-for-you-grid"></div>
+    </section>
+
+    <section id="recently-viewed" style="display:none; margin-top: 56px;">
+      <h2 style="font-size: 22px; margin-bottom: 20px;">Recently viewed</h2>
+      <div class="grid grid-3" id="recently-viewed-grid"></div>
+    </section>
   </section>
 
   <%- include('partials/footer', { pageScript: 'shop' }) %>
+  <script src="/javascripts/recently-viewed.js?v=<%= assetVersion('javascripts/recently-viewed.js') %>"></script>
+  <script src="/javascripts/recommended.js?v=<%= assetVersion('javascripts/recommended.js') %>"></script>
 </body>
 </html>

@@ -12,7 +12,7 @@
 
   var filtersForm = B.$('#shop-filters-form');
   if (filtersForm) {
-    ['shop-filter-price', 'shop-filter-rating', 'shop-filter-instock', 'shop-filter-onsale'].forEach(function (id) {
+    ['shop-filter-price', 'shop-filter-rating', 'shop-filter-brand', 'shop-filter-scent', 'shop-filter-skin', 'shop-filter-instock', 'shop-filter-onsale'].forEach(function (id) {
       var field = B.$('#' + id);
       if (field) field.addEventListener('change', function () { filtersForm.submit(); });
     });

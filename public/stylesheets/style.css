@@ -13,10 +13,10 @@
   --primary: #b34a72;
   --primary-dark: #98395d;
   --primary-soft: #f7e6ee;
-  --gold: #b9863a;
+  --gold: #8a5f22;
   --gold-soft: #f7edda;
   --border: #f0dfe7;
-  --success: #2e7d5b;
+  --success: #256b4d;
   --success-soft: #e3f2ea;
   --danger: #bb3a4b;
   --danger-soft: #fbe7ea;
@@ -174,7 +174,7 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 }
 .btn-danger:hover { background: #f6d2d8; color: var(--danger); }
 
-.btn-sm { padding: 9px 16px; font-size: 13.5px; }
+.btn-sm { padding: 14px 18px; font-size: 13.5px; }
 .btn-block { width: 100%; }
 
 .icon-btn {
@@ -182,8 +182,8 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -197,6 +197,21 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 /* --------------------------------------------------------------------------
    Announcement bar + header
    -------------------------------------------------------------------------- */
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 12px;
+  z-index: 200;
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 12px; }
 
 .announce {
   background: linear-gradient(90deg, var(--primary-dark), var(--primary) 55%, var(--gold));
@@ -796,6 +811,20 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
   letter-spacing: 2px;
 }
 .stars .stars-count { color: var(--muted); font-size: 12.5px; letter-spacing: 0; }
+.stars-empty { display: inline-block; font-size: 12.5px; color: var(--muted); }
+
+.card-shade-dots { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
+.shade-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  flex: none;
+  transition: transform 0.15s ease;
+}
+.shade-dot:hover { transform: scale(1.2); }
+.shade-dot.is-sold-out { opacity: 0.35; }
+.shade-dot-more { font-size: 11.5px; font-weight: 600; color: var(--muted); }
 
 .stock-pill {
   display: inline-flex;
@@ -1279,6 +1308,44 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
   padding: 20px 26px 26px;
   background: var(--surface);
 }
+
+.cross-sell {
+  padding: 4px 26px 18px;
+  border-top: 1px solid var(--border);
+}
+.cross-sell h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 14px 0 12px;
+}
+.cross-sell-row { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.cross-sell-item { flex: none; width: 108px; }
+.cross-sell-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-soft);
+  margin-bottom: 6px;
+}
+.cross-sell-art img { width: 100%; height: 100%; object-fit: cover; }
+.cross-sell-art .art-emoji { font-size: 28px; }
+.cross-sell-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cross-sell-price { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
 
 .cart-totals-row {
   display: flex;
@@ -1997,6 +2064,24 @@ img[src$="dawn-blush-peony.jpg"] {
   padding: 60px 0 30px;
   font-size: 14px;
 }
+
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 32px;
+  padding-bottom: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.trust-item svg { width: 19px; height: 19px; flex: none; color: var(--gold); }
 
 .footer-grid {
   display: grid;

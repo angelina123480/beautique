@@ -9,6 +9,11 @@ const users = require('../lib/users');
 const orders = require('../lib/orders');
 const emailService = require('../lib/emailService');
 const auth = require('../lib/auth');
+const scents = require('../lib/scents');
+const skinGoals = require('../lib/skin-goals');
+
+const SCENT_FAMILY_IDS = new Set(scents.SCENT_FAMILIES.map((entry) => entry.id));
+const SKIN_GOAL_IDS = new Set(skinGoals.SKIN_GOALS.map((entry) => entry.id));
 
 const router = express.Router();
 
@@ -105,10 +110,21 @@ router.get('/shop', ah(async (req, res) => {
   const rating = ['3', '4'].includes(req.query.rating) ? req.query.rating : '';
   const inStock = req.query.inStock === '1';
   const onSaleOnly = req.query.onSale === '1';
+  const scentFamily = SCENT_FAMILY_IDS.has(req.query.scentFamily) ? req.query.scentFamily : '';
+  const skinGoal = SKIN_GOAL_IDS.has(req.query.skinGoal) ? req.query.skinGoal : '';
 
   let products = await catalog.getProducts();
+  /* Brand list always reflects the full catalog, not the currently-filtered
+     subset — otherwise picking a brand could make other brands disappear
+     from their own filter, which reads as a bug rather than a facet. */
+  const allBrands = Array.from(new Set(products.map((product) => product.brand).filter(Boolean))).sort();
+  const brand = allBrands.includes(req.query.brand) ? req.query.brand : '';
+
   if (category) {
     products = products.filter((product) => product.category === category);
+  }
+  if (brand) {
+    products = products.filter((product) => product.brand === brand);
   }
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
@@ -129,6 +145,12 @@ router.get('/shop', ah(async (req, res) => {
   if (onSaleOnly) {
     products = products.filter((product) => product.onSale);
   }
+  if (scentFamily) {
+    products = products.filter((product) => (product.scentFamily || []).includes(scentFamily));
+  }
+  if (skinGoal) {
+    products = products.filter((product) => (product.skinGoals || []).includes(skinGoal));
+  }
   products.sort(SORTS[sort]);
 
   res.render('shop', {
@@ -136,13 +158,17 @@ router.get('/shop', ah(async (req, res) => {
     menuId: 'shop',
     products,
     categories: allCategories,
+    brands: allBrands,
     searchTerm,
     activeCategory: category,
     activeSort: sort,
     activePrice: price,
     activeRating: rating,
     activeInStock: inStock,
-    activeOnSale: onSaleOnly
+    activeOnSale: onSaleOnly,
+    activeBrand: brand,
+    activeScentFamily: scentFamily,
+    activeSkinGoal: skinGoal
   });
 }));
 
@@ -242,7 +268,10 @@ router.get('/product/:id', ah(async (req, res, next) => {
     product,
     reviews,
     related: await catalog.relatedProducts(product, 3),
-    frequentlyBought: await catalog.frequentlyBoughtWith(product, 4)
+    frequentlyBought: await catalog.frequentlyBoughtWith(product, 4),
+    ogDescription: product.description,
+    ogImage: (product.images && product.images[0]) || '',
+    ogType: 'product'
   });
 }));
 

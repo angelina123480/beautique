@@ -234,6 +234,14 @@
     </div>
   </section>
 
+  <section class="container" style="padding: 56px 0;">
+    <section id="recently-viewed" style="display:none;">
+      <h2 style="font-size: 22px; margin-bottom: 20px;">Recently viewed</h2>
+      <div class="grid grid-3" id="recently-viewed-grid"></div>
+    </section>
+  </section>
+
   <%- include('partials/footer', { pageScript: 'home' }) %>
+  <script src="/javascripts/recently-viewed.js?v=<%= assetVersion('javascripts/recently-viewed.js') %>"></script>
 </body>
 </html>

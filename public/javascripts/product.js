@@ -7,6 +7,23 @@
   if (!page) return;
   var productId = Number(page.getAttribute('data-product-id'));
 
+  /* Recently viewed — snapshot this product using the same data already on
+     its own wishlist button, so no extra markup or server round-trip is
+     needed just to power the "recently viewed" strip elsewhere. */
+  var pdpWishlistBtn = B.$('.wishlist-btn-pdp');
+  if (pdpWishlistBtn) {
+    B.recentlyViewed.record({
+      id: productId,
+      name: pdpWishlistBtn.getAttribute('data-name') || '',
+      price: Number(pdpWishlistBtn.getAttribute('data-price')) || 0,
+      emoji: pdpWishlistBtn.getAttribute('data-emoji') || '',
+      tone: Number(pdpWishlistBtn.getAttribute('data-tone')) || 340,
+      image: pdpWishlistBtn.getAttribute('data-image') || '',
+      stock: Number(pdpWishlistBtn.getAttribute('data-stock')) || 0,
+      hasShades: pdpWishlistBtn.getAttribute('data-has-shades') === '1'
+    });
+  }
+
   /* Gallery — arrows and thumbnails step through the current photo set.
      The set itself is rebuilt per shade (see applyShade below) so each
      shade only ever shows its own matching photos. */

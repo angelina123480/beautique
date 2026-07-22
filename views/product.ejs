@@ -255,8 +255,16 @@
         </div>
       </div>
     <% } %>
+
+    <section id="recently-viewed" data-exclude-id="<%= product.id %>" style="display:none; padding-bottom: 40px;">
+      <div class="section-head">
+        <div><h2>Recently viewed</h2></div>
+      </div>
+      <div class="grid grid-3" id="recently-viewed-grid"></div>
+    </section>
   </section>
 
   <%- include('partials/footer', { pageScript: 'product' }) %>
+  <script src="/javascripts/recently-viewed.js?v=<%= assetVersion('javascripts/recently-viewed.js') %>"></script>
 </body>
 </html>

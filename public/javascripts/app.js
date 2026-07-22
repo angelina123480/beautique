@@ -58,16 +58,37 @@
     }, 3400);
   }
 
-  /* ---------------- Modals ---------------- */
+  /* ---------------- Modals ----------------
+     Keyboard/screen-reader support: opening moves focus into the dialog and
+     traps Tab/Shift+Tab inside it (otherwise a keyboard user could tab
+     straight through into the page behind the backdrop); closing restores
+     focus to whatever triggered it, so the user isn't dropped back at the
+     top of the page. */
+  var FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var modalReturnFocus = null;
+
+  function focusableIn(modal) {
+    return $$(FOCUSABLE_SELECTOR, modal).filter(function (el) { return el.offsetParent !== null; });
+  }
 
   function openModal(id) {
     var modal = typeof id === 'string' ? $('#' + id) : id;
-    if (modal) modal.classList.add('is-open');
+    if (!modal) return;
+    modalReturnFocus = document.activeElement;
+    modal.classList.add('is-open');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    var target = focusableIn(modal)[0];
+    if (target) target.focus();
   }
 
   function closeModal(el) {
     var backdrop = el.closest ? el.closest('.modal-backdrop') : null;
     (backdrop || el).classList.remove('is-open');
+    if (modalReturnFocus && typeof modalReturnFocus.focus === 'function') {
+      modalReturnFocus.focus();
+    }
+    modalReturnFocus = null;
   }
 
   document.addEventListener('click', function (e) {
@@ -77,14 +98,32 @@
       return;
     }
     if (e.target.classList && e.target.classList.contains('modal-backdrop')) {
-      e.target.classList.remove('is-open');
+      closeModal(e.target);
     }
   });
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      $$('.modal-backdrop.is-open').forEach(function (m) { m.classList.remove('is-open'); });
+      var open = $$('.modal-backdrop.is-open');
+      if (open.length) open.forEach(function (m) { closeModal(m); });
       closeCartDrawer();
+      return;
+    }
+    if (e.key === 'Tab') {
+      var openModals = $$('.modal-backdrop.is-open');
+      var modal = openModals[openModals.length - 1];
+      if (!modal) return;
+      var focusable = focusableIn(modal);
+      if (!focusable.length) return;
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
   });
 
@@ -270,6 +309,56 @@
       '<div class="cart-totals-row"><span>Shipping</span><span>' + (shipping === 0 ? 'Free' : money(shipping)) + '</span></div>' +
       '<div class="cart-totals-row grand"><span>Total</span><span>' + money(subtotal + shipping) + '</span></div>' +
       '<a class="btn btn-primary btn-block" href="/checkout">Checkout</a>';
+
+    renderCrossSell(cart);
+  }
+
+  /* "Frequently bought together" strip in the cart drawer — based on the
+     first item in the bag. The cart itself is pure localStorage with no
+     server round-trip, so this is the one thing in the drawer that needs
+     a fetch; guarded by lastCrossSellKey so quantity +/- clicks (which
+     re-render the whole cart) don't refetch when the actual set of
+     products in the bag hasn't changed. */
+  var lastCrossSellKey = null;
+
+  function renderCrossSell(cart) {
+    var container = $('#cart-cross-sell');
+    if (!container) return;
+
+    var cartIds = cart.map(function (item) { return item.id; });
+    var key = cartIds.slice().sort().join(',');
+    if (key === lastCrossSellKey) return;
+    lastCrossSellKey = key;
+
+    if (!cartIds.length) {
+      container.innerHTML = '';
+      return;
+    }
+
+    api('/api/products/' + cartIds[0] + '/frequently-bought?limit=4').then(function (result) {
+      if (key !== lastCrossSellKey) return; // cart changed again while this was in flight
+      var suggestions = (result.products || []).filter(function (p) { return cartIds.indexOf(p.id) === -1; });
+      if (!suggestions.length) {
+        container.innerHTML = '';
+        return;
+      }
+      container.innerHTML = '<div class="cross-sell"><h4>Frequently bought together</h4><div class="cross-sell-row">' +
+        suggestions.map(function (p) {
+          var art = p.images && p.images[0]
+            ? '<img src="' + escapeHtml(p.images[0]) + '" alt="' + escapeHtml(p.name) + '">'
+            : '<span class="art-emoji">' + (p.emoji || window.BeautiqueIcons.bottle) + '</span>';
+          var cta = (p.shades && p.shades.length)
+            ? '<a class="btn btn-soft btn-sm btn-block" href="/product/' + p.id + '">Choose a shade</a>'
+            : '<button class="btn btn-soft btn-sm btn-block add-to-cart" type="button" data-id="' + p.id + '" data-name="' + escapeHtml(p.name) + '" data-price="' + p.effectivePrice + '" data-emoji="' + escapeHtml(p.emoji || '') + '" data-tone="' + (p.tone || 0) + '" data-stock="' + p.stock + '">Add</button>';
+          return '<div class="cross-sell-item">' +
+            '<a href="/product/' + p.id + '" class="cross-sell-art" style="--tone:' + (p.tone || 340) + ';">' + art + '</a>' +
+            '<div class="cross-sell-name">' + escapeHtml(p.name) + '</div>' +
+            '<div class="cross-sell-price">' + money(p.effectivePrice) + '</div>' +
+            cta +
+            '</div>';
+        }).join('') +
+        '</div></div>';
+    }).catch(function () { container.innerHTML = ''; });
   }
 
   /* Drawer open/close */
@@ -408,6 +497,28 @@
 
   function removeFromWishlist(id) {
     saveWishlist(getWishlist().filter(function (item) { return item.id !== id; }));
+  }
+
+  /* Recently viewed — a lightweight snapshot of each product page visited,
+     most-recent-first, capped at 10. Recorded from the product page itself
+     (see product.js) using the same data already on that page's wishlist
+     button, so this never needs its own server round-trip either. */
+  var RECENTLY_VIEWED_KEY = 'beautiqueRecentlyViewed';
+  var RECENTLY_VIEWED_MAX = 10;
+
+  function getRecentlyViewed() {
+    try {
+      var list = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function recordRecentlyViewed(item) {
+    var list = getRecentlyViewed().filter(function (line) { return line.id !== item.id; });
+    list.unshift(item);
+    localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(list.slice(0, RECENTLY_VIEWED_MAX)));
   }
 
   function renderWishlistState() {
@@ -747,6 +858,10 @@
       remove: removeFromWishlist
     },
     renderWishlistState: renderWishlistState,
+    recentlyViewed: {
+      get: getRecentlyViewed,
+      record: recordRecentlyViewed
+    },
     seasonalShades: {
       get: getSeasonalShades,
       save: saveSeasonalShade,

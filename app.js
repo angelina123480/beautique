@@ -87,6 +87,14 @@ app.use((req, res, next) => {
   next();
 });
 
+/* Exposed so views can build absolute URLs (og:image, og:url) without every
+   route handler needing to pass req through explicitly. */
+app.use((req, res, next) => {
+  res.locals.siteUrl = req.protocol + '://' + req.get('host');
+  res.locals.currentPath = req.originalUrl;
+  next();
+});
+
 app.use(auth.attachUser);
 
 app.use('/api', require('./routes/api'));
