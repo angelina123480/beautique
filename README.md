@@ -56,8 +56,10 @@ Copy `.env.example` to `.env` (all values optional):
 ```
 app.js                Express app: middleware, security headers, error pages
 bin/www               HTTP server bootstrap
-db/schema.sql         Postgres schema (source of truth for the table structure)
-db/import.js          One-time script to load data/*.json into a fresh database
+db/migrations/         Versioned schema changes, applied by db/migrate.js
+db/migrate.js          Migration runner (source of truth for the schema)
+db/schema.sql          Full current-state snapshot of the schema, for reference
+db/import.js           One-time script to load data/*.json into a fresh database
 lib/db.js             Shared Postgres connection (Neon serverless driver)
 lib/users.js          User accounts, discount codes
 lib/products.js       Products, shades, reviews
@@ -81,10 +83,21 @@ data/                 Bundled catalog data (products.json, categories.json) used
 
 ## Database
 
-All app data lives in Postgres — see `db/schema.sql` for the table structure. To set up a fresh database:
+All app data lives in Postgres — see `db/schema.sql` for a full current-state snapshot of the table structure. To set up a fresh database:
 
 1. Provision a Postgres database (e.g. Neon, or Vercel's Storage tab) and put its connection string in `.env` as `DATABASE_URL`.
-2. Apply the schema: run each statement in `db/schema.sql` against your database.
+2. Apply the schema: `node db/migrate.js`.
 3. Optionally seed it from the bundled demo data: `node db/import.js` (only works against an empty database — it refuses to run if `orders` already has rows, since it truncates everything first).
+
+### Migrations
+
+`db/migrations/*.sql` is the source of truth for the schema, applied in filename order by `node db/migrate.js` — it's safe to run any time, since it tracks what's already applied (in a `schema_migrations` table) and only runs what's new. To change the schema:
+
+1. Add a new file, e.g. `db/migrations/0002_add_something.sql`.
+2. Run `node db/migrate.js` locally to apply and test it.
+3. Update `db/schema.sql` to match the new end state (it's a snapshot for reference, not applied directly).
+4. Deploy, then run `node db/migrate.js` again pointed at production to apply it there too.
+
+For local development, use a separate Neon branch rather than testing directly against production — see your Neon project's **Branches** tab to create one, then point your local `.env` at its connection string instead.
 
 `data/products.json` and `data/categories.json` stay in the repo on purpose — they're what the admin dashboard's "sync catalog to database" button pushes live, so editing them (or the whole catalog) can be deployed without touching the database directly.

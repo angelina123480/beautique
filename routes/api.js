@@ -5,6 +5,7 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const passwords = require('../lib/passwords');
+const db = require('../lib/db');
 const auth = require('../lib/auth');
 const catalog = require('../lib/catalog');
 const categories = require('../lib/categories');
@@ -650,17 +651,19 @@ router.post('/rewards/redeem', auth.requireUser, ah(async (req, res) => {
   }
 
   const code = rewards.generateCode();
-  await users.updateUser(userRecord.id, {
-    redeemedTiers: redeemedTiers.concat(tier.threshold),
-    lifetimePoints,
-    rewardPoints: Math.max(0, balance - tier.threshold)
-  });
-  await users.addDiscountCode(userRecord.id, {
-    code,
-    discount: tier.discount,
-    tier: tier.threshold,
-    createdAt: new Date().toISOString()
-  });
+  await db.sql.transaction([
+    users.updateUserQuery(userRecord.id, {
+      redeemedTiers: redeemedTiers.concat(tier.threshold),
+      lifetimePoints,
+      rewardPoints: Math.max(0, balance - tier.threshold)
+    }),
+    users.addDiscountCodeQuery(userRecord.id, {
+      code,
+      discount: tier.discount,
+      tier: tier.threshold,
+      createdAt: new Date().toISOString()
+    })
+  ]);
 
   res.json({ ok: true, code, discount: tier.discount });
 }));
@@ -724,10 +727,6 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     orderItems.push({ productId: product.id, name: product.name, quantity, price: unitPrice, shade });
   }
 
-  for (const item of orderItems) {
-    await products.adjustStock(item.productId, -item.quantity);
-  }
-
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
 
   let discount = 0;
@@ -762,7 +761,13 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  await orders.createOrder(order);
+  /* Everything below must commit together — otherwise a crash partway
+     through could decrement stock or award points without the order that
+     justified it (or vice versa). */
+  const txQueries = [
+    ...orders.createOrderQueries(order),
+    ...orderItems.map((item) => products.adjustStockQuery(item.productId, -item.quantity))
+  ];
 
   const userRecord = req.user;
   if (userRecord) {
@@ -774,15 +779,17 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     /* Whatever address they just delivered to becomes their saved address,
        so checkout stays pre-filled with wherever they actually asked us to
        ship last time, not just whatever they set once in their profile. */
-    await users.updateUser(userRecord.id, {
+    txQueries.push(users.updateUserQuery(userRecord.id, {
       rewardPoints: (Number(userRecord.rewardPoints) || 0) + pointsEarned,
       lifetimePoints: priorLifetime + pointsEarned,
       address
-    });
+    }));
     if (usedDiscountCode) {
-      await users.setDiscountCodeUsed(userRecord.id, usedDiscountCode, new Date().toISOString());
+      txQueries.push(users.setDiscountCodeUsedQuery(userRecord.id, usedDiscountCode, new Date().toISOString()));
     }
   }
+
+  await db.sql.transaction(txQueries.filter(Boolean));
 
   const itemsSummary = orderItems
     .map((item) => '  • ' + item.quantity + ' × ' + item.name + (item.shade ? ' (' + item.shade + ')' : '') + ' ($' + item.price.toFixed(2) + ')')
@@ -814,11 +821,11 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
     return res.status(400).json({ ok: false, message: 'Delivered orders can no longer be cancelled.' });
   }
 
-  await orders.cancelOrder(order.id);
   order.status = 'cancelled';
   order.cancelledAt = new Date().toISOString();
 
   let allProducts = null;
+  const txQueries = [orders.cancelOrderQuery(order.id)];
   for (const item of (order.items || [])) {
     let productId = item.productId;
     if (!productId) {
@@ -829,7 +836,7 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
       productId = match ? match.id : null;
     }
     if (productId) {
-      await products.adjustStock(productId, item.quantity || 1);
+      txQueries.push(products.adjustStockQuery(productId, item.quantity || 1));
     }
   }
 
@@ -838,22 +845,25 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
   // reverse the points it earned, and un-use any discount code it spent
   // (the code itself was earned separately via redeeming a tier, so a
   // cancelled order gives back the ability to use that code again rather
-  // than un-redeeming the tier).
+  // than un-redeeming the tier). Everything here commits atomically with the
+  // cancellation and restock above.
   if (order.userId && (order.pointsEarned || order.discountCode)) {
     const userRecord = await users.getUserById(order.userId);
     if (userRecord) {
       if (order.pointsEarned) {
         const priorLifetime = Number(userRecord.lifetimePoints) || Number(userRecord.rewardPoints) || 0;
-        await users.updateUser(userRecord.id, {
+        txQueries.push(users.updateUserQuery(userRecord.id, {
           rewardPoints: Math.max(0, (Number(userRecord.rewardPoints) || 0) - order.pointsEarned),
           lifetimePoints: Math.max(0, priorLifetime - order.pointsEarned)
-        });
+        }));
       }
       if (order.discountCode) {
-        await users.setDiscountCodeUsed(userRecord.id, order.discountCode, null);
+        txQueries.push(users.setDiscountCodeUsedQuery(userRecord.id, order.discountCode, null));
       }
     }
   }
+
+  await db.sql.transaction(txQueries.filter(Boolean));
 
   if (order.userEmail) {
     await emailService.sendEmail('order_cancellation', order.userEmail, {

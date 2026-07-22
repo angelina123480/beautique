@@ -1,9 +1,4 @@
--- Beautique — Postgres schema (Neon), as a full current-state snapshot for
--- reference/reading. NOT applied directly anymore — db/migrations/ is the
--- source of truth going forward (run `node db/migrate.js` to apply). This
--- file mirrors db/migrations/0001_initial_schema.sql; if you add a new
--- migration, update this snapshot to match the resulting end state too.
---
+-- Beautique — Postgres schema (Neon).
 -- IDs use BIGINT throughout: existing users/orders/products use Date.now()-style
 -- timestamps as ids, which overflow a 32-bit INT/SERIAL.
 
