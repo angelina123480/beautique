@@ -75,7 +75,8 @@ CREATE TABLE product_shades (
   color        TEXT NOT NULL DEFAULT '#d9a08b',
   images       TEXT[] NOT NULL DEFAULT '{}',
   tint_photos  BOOLEAN NOT NULL DEFAULT FALSE,
-  sort_order   INTEGER NOT NULL DEFAULT 0
+  sort_order   INTEGER NOT NULL DEFAULT 0,
+  stock        INTEGER NOT NULL DEFAULT 0  -- for shaded products, products.stock is derived from this (see lib/products.js)
 );
 CREATE INDEX idx_product_shades_product ON product_shades(product_id);
 

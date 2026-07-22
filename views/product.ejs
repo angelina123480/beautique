@@ -65,15 +65,18 @@
         <% } else { %>
           <span class="stock-pill stock-in"><%= product.stock %> in stock</span>
         <% } %>
+        <% if (product.shades && product.shades.length) { %>
+          <span class="stock-pill stock-neutral"><%= product.shades.length %> shade<%= product.shades.length === 1 ? '' : 's' %> available</span>
+        <% } %>
 
         <p style="margin-top: 18px; color: var(--ink-soft); line-height: 1.75;"><%= product.description %></p>
 
         <% if (product.shades && product.shades.length) { %>
           <div class="field" style="margin-top: 18px;">
-            <label>Shade <span id="shade-label" class="text-muted" style="font-weight: 400;"><%= product.selectedShade ? '— ' + product.selectedShade.label : '' %></span></label>
+            <label>Shade <span id="shade-label" class="text-muted" style="font-weight: 400;"><%= product.selectedShade ? '— ' + product.selectedShade.label + (product.selectedShade.soldOut ? ' (Sold out)' : '') : '' %></span></label>
             <div class="shade-swatches" id="shade-swatches">
-              <% product.shades.forEach(function(shade, index) { %>
-                <button type="button" class="shade-swatch <%= index === 0 ? 'is-active' : '' %>" style="background-color: <%= shade.color %>;" data-name="<%= shade.name %>" data-label="<%= shade.label %>" data-color="<%= shade.color %>" data-images='<%- JSON.stringify(shade.images || []) %>' data-tint-photos="<%= shade.tintPhotos ? '1' : '' %>" aria-label="<%= shade.label %>" title="<%= shade.label %>"></button>
+              <% product.shades.forEach(function(shade) { %>
+                <button type="button" class="shade-swatch <%= (product.selectedShade && shade.name === product.selectedShade.name) ? 'is-active' : '' %> <%= shade.soldOut ? 'is-sold-out' : '' %>" style="background-color: <%= shade.color %>;" data-name="<%= shade.name %>" data-label="<%= shade.label %>" data-color="<%= shade.color %>" data-images='<%- JSON.stringify(shade.images || []) %>' data-tint-photos="<%= shade.tintPhotos ? '1' : '' %>" data-stock="<%= shade.stock %>" data-sold-out="<%= shade.soldOut ? '1' : '' %>" aria-label="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>" title="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>"></button>
               <% }); %>
             </div>
             <a href="/shade-matcher" class="link-more" style="margin-top: 8px; display: inline-block;">Not sure which shade? Find your match →</a>
@@ -93,8 +96,9 @@
                     data-price="<%= product.effectivePrice %>"
                     data-emoji="<%= product.emoji %>"
                     data-tone="<%= product.tone %>"
-                    data-stock="<%= product.stock %>"
-                    data-shade="<%= product.selectedShade ? product.selectedShade.name : '' %>">Add to bag — <%= money(product.effectivePrice) %></button>
+                    data-stock="<%= product.selectedShade ? product.selectedShade.stock : product.stock %>"
+                    data-shade="<%= product.selectedShade ? product.selectedShade.name : '' %>"
+                    <%= (product.selectedShade && product.selectedShade.soldOut) ? 'disabled' : '' %>><%= (product.selectedShade && product.selectedShade.soldOut) ? 'This shade is sold out' : 'Add to bag — ' + money(product.effectivePrice) %></button>
           <% } else { %>
             <button class="btn btn-primary" disabled>Sold out</button>
             <a class="btn btn-ghost" href="/shop">Browse alternatives</a>

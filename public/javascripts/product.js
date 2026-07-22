@@ -166,12 +166,25 @@
   function applyShade(swatch) {
     var color = swatch.getAttribute('data-color');
     var label = swatch.getAttribute('data-label');
+    var soldOut = swatch.getAttribute('data-sold-out') === '1';
+    var stock = Number(swatch.getAttribute('data-stock')) || 0;
     var images = [];
     try { images = JSON.parse(swatch.getAttribute('data-images') || '[]'); } catch (e) { /* ignore */ }
 
     shadeSwatches.forEach(function (s) { s.classList.toggle('is-active', s === swatch); });
-    if (shadeLabel) shadeLabel.textContent = label ? '— ' + label : '';
-    if (addBtn) addBtn.setAttribute('data-shade', swatch.getAttribute('data-name') || '');
+    if (shadeLabel) shadeLabel.textContent = label ? '— ' + label + (soldOut ? ' (Sold out)' : '') : '';
+    if (addBtn) {
+      addBtn.setAttribute('data-shade', swatch.getAttribute('data-name') || '');
+      addBtn.setAttribute('data-stock', stock);
+      addBtn.disabled = soldOut;
+      var qtyStepper = B.$('#pdp-qty');
+      if (qtyStepper) qtyStepper.style.display = soldOut ? 'none' : '';
+      if (soldOut) {
+        addBtn.textContent = 'This shade is sold out';
+      } else {
+        setQty(Math.min(currentQty(), stock) || 1);
+      }
+    }
 
     if (images.length) {
       /* This shade reuses shared photos (data-tint-photos) rather than its
@@ -204,7 +217,11 @@
     // defaulting to the first one.
     var requestedShade = new URLSearchParams(window.location.search).get('shade');
     var requested = requestedShade && shadeSwatches.find(function (s) { return s.getAttribute('data-name') === requestedShade; });
-    var initialSwatch = requested || shadeSwatches[0];
+    // Match the server's default (see lib/catalog.js getSelectedShade): prefer
+    // the first shade still in stock, so this client-side re-apply on load
+    // can't undo that by falling back to shade 0 regardless of its stock.
+    var firstInStock = shadeSwatches.find(function (s) { return s.getAttribute('data-sold-out') !== '1'; });
+    var initialSwatch = requested || firstInStock || shadeSwatches[0];
     applyShade(initialSwatch);
     if (requested) {
       initialSwatch.scrollIntoView({ behavior: 'smooth', block: 'center' });

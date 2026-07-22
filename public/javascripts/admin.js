@@ -234,14 +234,32 @@
 
     var shadeCountInput = B.$('#product-shade-count');
     var shadesContainer = B.$('#product-shades-rows');
+    var stockInput = B.$('#product-stock');
+    var stockComputedNote = B.$('#stock-computed-note');
 
     function currentShadeValues() {
       return B.$$('.shade-row', shadesContainer).map(function (row) {
         return {
           label: row.querySelector('[name="shadeLabel"]').value,
-          color: row.querySelector('[name="shadeColor"]').value
+          color: row.querySelector('[name="shadeColor"]').value,
+          stock: row.querySelector('[name="shadeStock"]').value
         };
       });
+    }
+
+    /* When a product has shades, its overall stock is the sum of its
+       shades' stock (server-computed) — reflect that live here too, so the
+       top-level field isn't left showing a stale, editable number. */
+    function updateComputedStock() {
+      var hasShades = B.$$('.shade-row', shadesContainer).length > 0;
+      stockComputedNote.style.display = hasShades ? '' : 'none';
+      stockInput.disabled = hasShades;
+      if (hasShades) {
+        var total = B.$$('.shade-row', shadesContainer).reduce(function (sum, row) {
+          return sum + (Number(row.querySelector('[name="shadeStock"]').value) || 0);
+        }, 0);
+        stockInput.value = total;
+      }
     }
 
     /* Renders exactly `count` shade rows. Not mandatory — count defaults to
@@ -251,28 +269,35 @@
       var existing = prefill || currentShadeValues();
       var rows = [];
       for (var i = 0; i < count; i++) {
-        var val = existing[i] || { label: '', color: '#d9a08b' };
+        var val = existing[i] || { label: '', color: '#d9a08b', stock: 0 };
         rows.push(
           '<div class="field-row shade-row" data-shade-index="' + i + '">' +
             '<div class="field"><input type="text" name="shadeLabel" placeholder="Shade name (e.g. Rose Nude)" value="' + B.escapeHtml(val.label || '') + '"></div>' +
             '<div class="field" style="max-width:90px;"><input type="color" name="shadeColor" value="' + (val.color || '#d9a08b') + '"></div>' +
+            '<div class="field" style="max-width:90px;"><input type="number" name="shadeStock" min="0" placeholder="Stock" value="' + (val.stock || 0) + '"></div>' +
           '</div>'
         );
       }
       shadesContainer.innerHTML = rows.join('');
+      updateComputedStock();
     }
 
     function collectShadeRows() {
       return B.$$('.shade-row', shadesContainer).map(function (row) {
         var label = row.querySelector('[name="shadeLabel"]').value.trim();
         var color = row.querySelector('[name="shadeColor"]').value;
-        return label ? { name: label, label: label, color: color } : null;
+        var stock = Math.max(0, Number(row.querySelector('[name="shadeStock"]').value) || 0);
+        return label ? { name: label, label: label, color: color, stock: stock } : null;
       }).filter(Boolean);
     }
 
     shadeCountInput.addEventListener('input', function () {
       var count = Math.max(0, Math.min(24, Number(shadeCountInput.value) || 0));
       renderShadeRows(count);
+    });
+
+    shadesContainer.addEventListener('input', function (e) {
+      if (e.target.name === 'shadeStock') updateComputedStock();
     });
 
     function setStatus(message, kind) {
@@ -398,7 +423,7 @@
       var productShades = (product.shades || []).filter(function (s) { return s && typeof s === 'object'; });
       shadeCountInput.value = productShades.length;
       renderShadeRows(productShades.length, productShades.map(function (s) {
-        return { label: s.label || s.name || '', color: s.color || '#d9a08b' };
+        return { label: s.label || s.name || '', color: s.color || '#d9a08b', stock: s.stock || 0 };
       }));
       addForm.elements.description.value = product.description || '';
       modalTitle.textContent = 'Edit ' + product.name;

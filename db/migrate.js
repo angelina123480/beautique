@@ -21,12 +21,42 @@ const sql = neon(process.env.DATABASE_URL);
 
 const migrationsDir = path.join(__dirname, 'migrations');
 
+/* Splits a file into individual statements on ';', except inside a
+   dollar-quoted block (e.g. `DO $$ ... ;  ... ; ... $$;` for a PL/pgSQL
+   block) — a naive split would chop that up at every semicolon inside it. */
 function statementsIn(fileContents) {
-  return fileContents
-    .replace(/^--.*$/gm, '')
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const text = fileContents.replace(/^--.*$/gm, '');
+  const statements = [];
+  let current = '';
+  let dollarTag = null;
+  let i = 0;
+
+  while (i < text.length) {
+    const tagMatch = !dollarTag && text.slice(i).match(/^\$[a-zA-Z_]*\$/);
+    const closeMatch = dollarTag && text.startsWith(dollarTag, i);
+
+    if (tagMatch) {
+      dollarTag = tagMatch[0];
+      current += dollarTag;
+      i += dollarTag.length;
+    } else if (closeMatch) {
+      current += dollarTag;
+      i += dollarTag.length;
+      dollarTag = null;
+    } else if (text[i] === ';' && !dollarTag) {
+      const trimmed = current.trim();
+      if (trimmed) statements.push(trimmed);
+      current = '';
+      i++;
+    } else {
+      current += text[i];
+      i++;
+    }
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) statements.push(trimmed);
+  return statements;
 }
 
 async function tableExists(name) {

@@ -79,7 +79,10 @@
                     </div>
                   </td>
                   <td><input class="input input-sm" type="number" min="0" step="0.01" name="price" value="<%= product.price %>"></td>
-                  <td><input class="input input-sm" type="number" min="0" name="stock" value="<%= product.stock %>"></td>
+                  <td>
+                    <input class="input input-sm" type="number" min="0" name="stock" value="<%= product.stock %>"
+                      <%= (product.shades && product.shades.length) ? 'disabled title="Edit stock per shade instead"' : '' %>>
+                  </td>
                   <td>
                     <span class="badge" style="<%= product.soldOut ? '' : 'opacity:.6;' %>"><%= product.soldOut ? 'Sold out' : 'In stock' %></span>
                   </td>
@@ -271,7 +274,10 @@
         </div>
         <div class="field-row">
           <div class="field"><label>Price ($) *</label><input name="price" type="number" min="0" step="0.01" required placeholder="24.00"></div>
-          <div class="field"><label>Stock</label><input name="stock" type="number" min="0" value="10"></div>
+          <div class="field" id="field-stock">
+            <label>Stock <span class="text-muted" id="stock-computed-note" style="font-weight:400; display:none;">(computed from shade stock below)</span></label>
+            <input name="stock" id="product-stock" type="number" min="0" value="10">
+          </div>
         </div>
         <div class="field">
           <label>Sale price ($) <span class="text-muted" style="font-weight:400;">(optional — leave blank if not on sale)</span></label>

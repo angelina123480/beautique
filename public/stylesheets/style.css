@@ -801,6 +801,8 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 .stock-in { background: var(--success-soft); color: var(--success); }
 .stock-low { background: var(--gold-soft); color: var(--gold); }
 .stock-out { background: var(--danger-soft); color: var(--danger); }
+.stock-pill.stock-neutral { background: var(--border); color: var(--ink-soft); }
+.stock-pill.stock-neutral::before { display: none; }
 
 /* Status pills for orders */
 .status-pill {
@@ -1418,6 +1420,14 @@ img[src$="dawn-blush-peony.jpg"] {
 .shade-swatch.is-active {
   box-shadow: 0 0 0 1px var(--border), 0 0 0 5px var(--primary-soft), 0 0 0 7px var(--primary);
   transform: scale(1.08);
+}
+.shade-swatch.is-sold-out { opacity: 0.4; position: relative; }
+.shade-swatch.is-sold-out::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--danger) calc(50% - 1.5px), var(--danger) calc(50% + 1.5px), transparent calc(50% + 1.5px));
 }
 
 .pdp-info h1 { font-size: clamp(28px, 3.6vw, 40px); margin: 10px 0 6px; }

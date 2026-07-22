@@ -424,7 +424,8 @@ function applyProductFields(product, payload, validCategoryIds) {
           const normalized = {
             name,
             label: String(shade.label || name).trim() || name,
-            color: String(shade.color || '').trim() || '#d9a08b'
+            color: String(shade.color || '').trim() || '#d9a08b',
+            stock: Math.max(0, Math.floor(Number(shade.stock) || 0))
           };
           if (Array.isArray(shade.images)) {
             normalized.images = shade.images.map(String).map((value) => value.trim()).filter(Boolean);
@@ -435,7 +436,7 @@ function applyProductFields(product, payload, validCategoryIds) {
           return normalized;
         }
         const name = String(shade).trim();
-        return name ? { name, label: name, color: '#d9a08b' } : null;
+        return name ? { name, label: name, color: '#d9a08b', stock: 0 } : null;
       }).filter(Boolean);
     } else if (typeof payload.shades === 'string') {
       product.shades = payload.shades.split(',').map((value) => value.trim()).filter(Boolean)
@@ -711,12 +712,29 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     if (Array.isArray(product.shades) && product.shades.length && !shade) {
       return res.status(400).json({ ok: false, message: 'Please choose a shade for ' + product.name + ' before checking out.' });
     }
-    if (product.soldOut || product.stock < quantity) {
+
+    /* For a shaded product, availability is the specific shade's own stock
+       (product.stock/soldOut are just the sum across all shades — a shade
+       with 0 left shouldn't be buyable just because a different shade of
+       the same product still has stock). */
+    let availableStock = product.stock;
+    let itemSoldOut = product.soldOut;
+    if (shade) {
+      const shadeEntry = (product.shades || []).find((entry) => entry.name === shade);
+      if (!shadeEntry) {
+        return res.status(400).json({ ok: false, message: 'That shade of ' + product.name + ' is no longer available.' });
+      }
+      availableStock = shadeEntry.stock;
+      itemSoldOut = shadeEntry.soldOut;
+    }
+
+    if (itemSoldOut || availableStock < quantity) {
+      const label = product.name + (shade ? ' (' + shade + ')' : '');
       return res.status(400).json({
         ok: false,
-        message: product.stock > 0
-          ? 'Only ' + product.stock + ' of ' + product.name + ' left in stock.'
-          : product.name + ' is sold out.'
+        message: availableStock > 0
+          ? 'Only ' + availableStock + ' of ' + label + ' left in stock.'
+          : label + ' is sold out.'
       });
     }
 
@@ -766,7 +784,9 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
      justified it (or vice versa). */
   const txQueries = [
     ...orders.createOrderQueries(order),
-    ...orderItems.map((item) => products.adjustStockQuery(item.productId, -item.quantity))
+    ...orderItems.map((item) => item.shade
+      ? products.adjustShadeStockQuery(item.productId, item.shade, -item.quantity)
+      : products.adjustStockQuery(item.productId, -item.quantity))
   ];
 
   const userRecord = req.user;
@@ -836,7 +856,9 @@ router.post('/orders/:orderId/cancel', auth.requireUser, ah(async (req, res) => 
       productId = match ? match.id : null;
     }
     if (productId) {
-      txQueries.push(products.adjustStockQuery(productId, item.quantity || 1));
+      txQueries.push(item.shade
+        ? products.adjustShadeStockQuery(productId, item.shade, item.quantity || 1)
+        : products.adjustStockQuery(productId, item.quantity || 1));
     }
   }
 
