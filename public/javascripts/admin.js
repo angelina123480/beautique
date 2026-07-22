@@ -203,12 +203,9 @@
     var modalTitle = B.$('#product-modal-title');
     var submitBtn = B.$('#product-submit-btn');
     var imagesGrid = B.$('#product-images-grid');
-    var modelImagePreview = B.$('#product-model-image-preview');
     var imageInput = B.$('#product-image-input');
-    var modelImageInput = B.$('#product-model-image-input');
 
     var currentImages = [];
-    var currentModelImage = '';
     var editingProductId = null;
 
     var fieldScentFamily = B.$('#field-scent-family');
@@ -238,11 +235,12 @@
     var stockComputedNote = B.$('#stock-computed-note');
 
     function currentShadeValues() {
-      return B.$$('.shade-row', shadesContainer).map(function (row) {
+      return B.$$('.shade-card', shadesContainer).map(function (row) {
         return {
           label: row.querySelector('[name="shadeLabel"]').value,
           color: row.querySelector('[name="shadeColor"]').value,
-          stock: row.querySelector('[name="shadeStock"]').value
+          stock: row.querySelector('[name="shadeStock"]').value,
+          images: JSON.parse(row.getAttribute('data-images') || '[]')
         };
       });
     }
@@ -251,49 +249,128 @@
        shades' stock (server-computed) — reflect that live here too, so the
        top-level field isn't left showing a stale, editable number. */
     function updateComputedStock() {
-      var hasShades = B.$$('.shade-row', shadesContainer).length > 0;
+      var hasShades = B.$$('.shade-card', shadesContainer).length > 0;
       stockComputedNote.style.display = hasShades ? '' : 'none';
       stockInput.disabled = hasShades;
       if (hasShades) {
-        var total = B.$$('.shade-row', shadesContainer).reduce(function (sum, row) {
+        var total = B.$$('.shade-card', shadesContainer).reduce(function (sum, row) {
           return sum + (Number(row.querySelector('[name="shadeStock"]').value) || 0);
         }, 0);
         stockInput.value = total;
       }
     }
 
+    function renderShadeImagesGrid(row) {
+      var images = JSON.parse(row.getAttribute('data-images') || '[]');
+      row.querySelector('.shade-images-grid').innerHTML = images.map(function (url, idx) {
+        return '<div class="image-thumb"><img src="' + B.escapeHtml(url) + '">' +
+          '<button type="button" class="image-thumb-edit" data-shade-edit-photo="' + idx + '">Edit</button>' +
+          '<button type="button" class="image-thumb-remove" data-shade-remove-photo="' + idx + '" aria-label="Remove photo">' + window.BeautiqueIcons.close + '</button></div>';
+      }).join('');
+    }
+
     /* Renders exactly `count` shade rows. Not mandatory — count defaults to
        0 and a product saves fine with no shades at all; any row left with
-       a blank name is dropped on submit rather than blocking saving. */
+       a blank name is dropped on submit rather than blocking saving. Each
+       row can carry its own photos (data-images), so clicking that shade on
+       the product page swaps in real photos instead of just tinting the
+       shared ones. */
     function renderShadeRows(count, prefill) {
       var existing = prefill || currentShadeValues();
       var rows = [];
       for (var i = 0; i < count; i++) {
-        var val = existing[i] || { label: '', color: '#d9a08b', stock: 0 };
+        var val = existing[i] || { label: '', color: '#d9a08b', stock: 0, images: [] };
         rows.push(
-          '<div class="field-row shade-row" data-shade-index="' + i + '">' +
-            '<div class="field"><input type="text" name="shadeLabel" placeholder="Shade name (e.g. Rose Nude)" value="' + B.escapeHtml(val.label || '') + '"></div>' +
-            '<div class="field" style="max-width:90px;"><input type="color" name="shadeColor" value="' + (val.color || '#d9a08b') + '"></div>' +
-            '<div class="field" style="max-width:90px;"><input type="number" name="shadeStock" min="0" placeholder="Stock" value="' + (val.stock || 0) + '"></div>' +
+          '<div class="shade-card" data-shade-index="' + i + '" data-images=\'' + JSON.stringify(val.images || []) + '\'>' +
+            '<div class="field-row">' +
+              '<div class="field"><input type="text" name="shadeLabel" placeholder="Shade name (e.g. Rose Nude)" value="' + B.escapeHtml(val.label || '') + '"></div>' +
+              '<div class="field"><input type="color" name="shadeColor" value="' + (val.color || '#d9a08b') + '"></div>' +
+              '<div class="field"><input type="number" name="shadeStock" min="0" placeholder="Stock" value="' + (val.stock || 0) + '"></div>' +
+            '</div>' +
+            '<div class="shade-photo-row">' +
+              '<div class="shade-photo-group">' +
+                '<label>Shade photos</label>' +
+                '<div class="image-manager shade-images-grid"></div>' +
+                '<button type="button" class="btn btn-ghost btn-sm shade-add-photos-btn">+ Photos</button>' +
+                '<input type="file" class="shade-photos-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">' +
+              '</div>' +
+            '</div>' +
           '</div>'
         );
       }
       shadesContainer.innerHTML = rows.join('');
+      B.$$('.shade-card', shadesContainer).forEach(function (row) {
+        renderShadeImagesGrid(row);
+      });
       updateComputedStock();
     }
 
     function collectShadeRows() {
-      return B.$$('.shade-row', shadesContainer).map(function (row) {
+      return B.$$('.shade-card', shadesContainer).map(function (row) {
         var label = row.querySelector('[name="shadeLabel"]').value.trim();
         var color = row.querySelector('[name="shadeColor"]').value;
         var stock = Math.max(0, Number(row.querySelector('[name="shadeStock"]').value) || 0);
-        return label ? { name: label, label: label, color: color, stock: stock } : null;
+        var images = JSON.parse(row.getAttribute('data-images') || '[]');
+        return label ? { name: label, label: label, color: color, stock: stock, images: images } : null;
       }).filter(Boolean);
     }
 
     shadeCountInput.addEventListener('input', function () {
       var count = Math.max(0, Math.min(24, Number(shadeCountInput.value) || 0));
       renderShadeRows(count);
+    });
+
+    shadesContainer.addEventListener('click', function (e) {
+      var addPhotosBtn = e.target.closest('.shade-add-photos-btn');
+      if (addPhotosBtn) {
+        addPhotosBtn.closest('.shade-card').querySelector('.shade-photos-input').click();
+        return;
+      }
+      var editPhotoBtn = e.target.closest('[data-shade-edit-photo]');
+      if (editPhotoBtn) {
+        var editPhotoRow = editPhotoBtn.closest('.shade-card');
+        var editIndex = Number(editPhotoBtn.getAttribute('data-shade-edit-photo'));
+        var editImages = JSON.parse(editPhotoRow.getAttribute('data-images') || '[]');
+        editAndUpload(editImages[editIndex]).then(function (url) {
+          if (url) {
+            editImages[editIndex] = url;
+            editPhotoRow.setAttribute('data-images', JSON.stringify(editImages));
+            renderShadeImagesGrid(editPhotoRow);
+          }
+          setStatus('');
+        }).catch(function (err) { setStatus(err.message, 'error'); });
+        return;
+      }
+      var removePhotoBtn = e.target.closest('[data-shade-remove-photo]');
+      if (removePhotoBtn) {
+        var photoRow = removePhotoBtn.closest('.shade-card');
+        var images = JSON.parse(photoRow.getAttribute('data-images') || '[]');
+        images.splice(Number(removePhotoBtn.getAttribute('data-shade-remove-photo')), 1);
+        photoRow.setAttribute('data-images', JSON.stringify(images));
+        renderShadeImagesGrid(photoRow);
+      }
+    });
+
+    shadesContainer.addEventListener('change', function (e) {
+      if (e.target.classList.contains('shade-photos-input')) {
+        var photoRow = e.target.closest('.shade-card');
+        var files = Array.prototype.slice.call(e.target.files || []);
+        e.target.value = '';
+        if (!files.length) return;
+        files.reduce(function (chain, file) {
+          return chain.then(function () {
+            return editAndUpload(file).then(function (url) {
+              if (url) {
+                var images = JSON.parse(photoRow.getAttribute('data-images') || '[]').concat([url]).slice(0, 6);
+                photoRow.setAttribute('data-images', JSON.stringify(images));
+                renderShadeImagesGrid(photoRow);
+              }
+            });
+          });
+        }, Promise.resolve()).then(function () {
+          setStatus('');
+        }).catch(function (err) { setStatus(err.message, 'error'); });
+      }
     });
 
     shadesContainer.addEventListener('input', function (e) {
@@ -308,15 +385,9 @@
     function renderImagesGrid() {
       imagesGrid.innerHTML = currentImages.map(function (url, index) {
         return '<div class="image-thumb"><img src="' + B.escapeHtml(url) + '">' +
+          '<button type="button" class="image-thumb-edit" data-edit-image="' + index + '">Edit</button>' +
           '<button type="button" class="image-thumb-remove" data-remove-image="' + index + '" aria-label="Remove photo">' + window.BeautiqueIcons.close + '</button></div>';
       }).join('');
-    }
-
-    function renderModelImagePreview() {
-      modelImagePreview.innerHTML = currentModelImage
-        ? '<div class="image-thumb"><img src="' + B.escapeHtml(currentModelImage) + '">' +
-          '<button type="button" class="image-thumb-remove" id="remove-model-image" aria-label="Remove photo">' + window.BeautiqueIcons.close + '</button></div>'
-        : '';
     }
 
     function uploadFile(file) {
@@ -327,28 +398,145 @@
       });
     }
 
+    /* ---------------- Photo editor (crop / rotate / zoom) ----------------
+       Shared by every photo picker on this page. Works on a freshly-picked
+       File (before it's ever uploaded) or an existing URL (to re-edit a
+       photo already on the product) — openImageEditor() always resolves to
+       either a Blob ready to upload, or null if the admin cancelled. */
+    var imageEditorModal = B.$('#image-editor-modal');
+    var imageEditorImg = B.$('#image-editor-img');
+    var imageEditorStatus = B.$('#image-editor-status');
+    var imageEditorZoomInput = B.$('#image-editor-zoom');
+    var cropperInstance = null;
+    var imageEditorResolve = null;
+    var imageEditorObjectUrl = null;
+    var imageEditorLastZoom = 0;
+
+    function cleanupImageEditor() {
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+      if (imageEditorObjectUrl) {
+        URL.revokeObjectURL(imageEditorObjectUrl);
+        imageEditorObjectUrl = null;
+      }
+      imageEditorImg.onload = null;
+      imageEditorStatus.textContent = '';
+      imageEditorStatus.className = 'form-status';
+    }
+
+    function finishImageEditor(result) {
+      cleanupImageEditor();
+      B.closeModal(imageEditorModal);
+      if (imageEditorResolve) {
+        var resolve = imageEditorResolve;
+        imageEditorResolve = null;
+        resolve(result);
+      }
+    }
+
+    /* `source` is either a File/Blob (fresh pick, not uploaded yet) or a
+       URL string (an already-uploaded photo being re-edited). */
+    function openImageEditor(source) {
+      return new Promise(function (resolve) {
+        imageEditorResolve = resolve;
+        imageEditorLastZoom = 0;
+        imageEditorZoomInput.value = 0;
+
+        if (source instanceof Blob) {
+          imageEditorImg.removeAttribute('crossorigin');
+          imageEditorObjectUrl = URL.createObjectURL(source);
+          imageEditorImg.src = imageEditorObjectUrl;
+        } else {
+          // crossorigin must be set before assigning src, and the URL needs
+          // a cache-busting param so the browser can't reuse an earlier,
+          // non-CORS-mode fetch of the same image from its cache — either
+          // would silently taint the canvas and break exporting later.
+          imageEditorImg.crossOrigin = 'anonymous';
+          imageEditorImg.src = source + (source.indexOf('?') === -1 ? '?' : '&') + '_edit=' + Date.now();
+        }
+
+        B.openModal(imageEditorModal);
+        imageEditorImg.onload = function () {
+          cropperInstance = new Cropper(imageEditorImg, {
+            viewMode: 1,
+            autoCropArea: 1,
+            background: false,
+            responsive: true,
+            zoomOnWheel: true
+          });
+        };
+      });
+    }
+
+    B.$('#image-editor-rotate-left').addEventListener('click', function () {
+      if (cropperInstance) cropperInstance.rotate(-90);
+    });
+    B.$('#image-editor-rotate-right').addEventListener('click', function () {
+      if (cropperInstance) cropperInstance.rotate(90);
+    });
+    B.$('#image-editor-flip').addEventListener('click', function () {
+      if (!cropperInstance) return;
+      cropperInstance.scaleX(-(cropperInstance.getData().scaleX || 1));
+    });
+    B.$('#image-editor-reset').addEventListener('click', function () {
+      if (!cropperInstance) return;
+      cropperInstance.reset();
+      imageEditorLastZoom = 0;
+      imageEditorZoomInput.value = 0;
+    });
+    imageEditorZoomInput.addEventListener('input', function () {
+      var value = Number(imageEditorZoomInput.value);
+      if (cropperInstance) cropperInstance.zoom(value - imageEditorLastZoom);
+      imageEditorLastZoom = value;
+    });
+
+    imageEditorModal.addEventListener('click', function (e) {
+      if (e.target === imageEditorModal || e.target.closest('[data-close-modal]')) {
+        finishImageEditor(null);
+      }
+    });
+
+    B.$('#image-editor-save').addEventListener('click', function () {
+      if (!cropperInstance) return finishImageEditor(null);
+      var canvas = cropperInstance.getCroppedCanvas({ maxWidth: 1600, maxHeight: 1600, imageSmoothingQuality: 'high' });
+      if (!canvas) {
+        imageEditorStatus.textContent = 'Could not read this photo — it may be blocked by the browser. Try re-uploading it fresh.';
+        imageEditorStatus.className = 'form-status is-error';
+        return;
+      }
+      canvas.toBlob(function (blob) {
+        finishImageEditor(blob);
+      }, 'image/jpeg', 0.9);
+    });
+
+    /* Runs a freshly-picked file through the editor, then uploads whatever
+       the admin saves (or does nothing if they cancel). */
+    function editAndUpload(file) {
+      return openImageEditor(file).then(function (blob) {
+        if (!blob) return null;
+        setStatus('Uploading…', 'info');
+        return uploadFile(new File([blob], file.name || 'photo.jpg', { type: 'image/jpeg' }));
+      });
+    }
+
     imageInput.addEventListener('change', function () {
       var files = Array.prototype.slice.call(imageInput.files || []);
       imageInput.value = '';
       if (!files.length) return;
-      setStatus('Uploading…', 'info');
-      Promise.all(files.map(uploadFile)).then(function (urls) {
-        currentImages = currentImages.concat(urls).slice(0, 8);
-        renderImagesGrid();
-        setStatus('');
-      }).catch(function (err) {
-        setStatus(err.message, 'error');
-      });
-    });
-
-    modelImageInput.addEventListener('change', function () {
-      var file = modelImageInput.files && modelImageInput.files[0];
-      modelImageInput.value = '';
-      if (!file) return;
-      setStatus('Uploading…', 'info');
-      uploadFile(file).then(function (url) {
-        currentModelImage = url;
-        renderModelImagePreview();
+      /* One editor session per photo, sequentially — Promise.all would try
+         to open the (single, shared) editor modal for every file at once. */
+      files.reduce(function (chain, file) {
+        return chain.then(function () {
+          return editAndUpload(file).then(function (url) {
+            if (url) {
+              currentImages = currentImages.concat([url]).slice(0, 8);
+              renderImagesGrid();
+            }
+          });
+        });
+      }, Promise.resolve()).then(function () {
         setStatus('');
       }).catch(function (err) {
         setStatus(err.message, 'error');
@@ -356,26 +544,29 @@
     });
 
     B.$('#product-image-add').addEventListener('click', function () { imageInput.click(); });
-    B.$('#product-model-image-add').addEventListener('click', function () { modelImageInput.click(); });
 
     imagesGrid.addEventListener('click', function (e) {
+      var editBtn = e.target.closest('[data-edit-image]');
+      if (editBtn) {
+        var index = Number(editBtn.getAttribute('data-edit-image'));
+        editAndUpload(currentImages[index]).then(function (url) {
+          if (url) {
+            currentImages[index] = url;
+            renderImagesGrid();
+          }
+          setStatus('');
+        }).catch(function (err) { setStatus(err.message, 'error'); });
+        return;
+      }
       var btn = e.target.closest('[data-remove-image]');
       if (!btn) return;
       currentImages.splice(Number(btn.getAttribute('data-remove-image')), 1);
       renderImagesGrid();
     });
 
-    modelImagePreview.addEventListener('click', function (e) {
-      if (e.target.id === 'remove-model-image') {
-        currentModelImage = '';
-        renderModelImagePreview();
-      }
-    });
-
     function resetForm() {
       editingProductId = null;
       currentImages = [];
-      currentModelImage = '';
       addForm.reset();
       updateCategoryFieldVisibility();
       shadeCountInput.value = 0;
@@ -383,7 +574,6 @@
       modalTitle.textContent = 'Add new product';
       submitBtn.textContent = 'Add product';
       renderImagesGrid();
-      renderModelImagePreview();
       setStatus('');
     }
 
@@ -402,7 +592,6 @@
 
       editingProductId = product.id;
       currentImages = (product.images || []).slice();
-      currentModelImage = product.modelImage || '';
       addForm.elements.name.value = product.name || '';
       addForm.elements.brand.value = product.brand || '';
       addForm.elements.price.value = product.price || 0;
@@ -423,13 +612,12 @@
       var productShades = (product.shades || []).filter(function (s) { return s && typeof s === 'object'; });
       shadeCountInput.value = productShades.length;
       renderShadeRows(productShades.length, productShades.map(function (s) {
-        return { label: s.label || s.name || '', color: s.color || '#d9a08b', stock: s.stock || 0 };
+        return { label: s.label || s.name || '', color: s.color || '#d9a08b', stock: s.stock || 0, images: s.images || [] };
       }));
       addForm.elements.description.value = product.description || '';
       modalTitle.textContent = 'Edit ' + product.name;
       submitBtn.textContent = 'Save changes';
       renderImagesGrid();
-      renderModelImagePreview();
       setStatus('');
       B.openModal('add-product-modal');
     });
@@ -450,8 +638,7 @@
         skinGoals: B.$$('input[name="skinGoals"]:checked', f).map(function (box) { return box.value; }),
         shades: collectShadeRows(),
         description: f.elements.description.value.trim(),
-        images: currentImages,
-        modelImage: currentModelImage
+        images: currentImages
       };
 
       var isEdit = editingProductId !== null;

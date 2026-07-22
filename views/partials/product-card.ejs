@@ -1,3 +1,10 @@
+<%
+  /* Not every shade needs its own photo for this to work — shades without
+     one are simply skipped, so the cycle just uses whichever do have one. */
+  var cardShadePhotos = (product.shades || [])
+    .map(function (shade) { return (shade.images && shade.images[0]) || null; })
+    .filter(Boolean);
+%>
 <article class="product-card reveal">
   <% if (product.badge) { %><span class="badge"><%= product.badge %></span><% } %>
   <button type="button" class="wishlist-btn"
@@ -12,7 +19,8 @@
           aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
   <a href="/product/<%= product.id %>" class="product-art" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
     <% if (product.images && product.images.length) { %>
-      <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
+      <img class="art-photo" src="<%= (cardShadePhotos[0]) || product.images[0] %>" alt="<%= product.name %>" loading="lazy"
+           <% if (cardShadePhotos.length > 1) { %>data-shade-photos='<%- JSON.stringify(cardShadePhotos) %>'<% } %>>
     <% } else if (product.emoji) { %>
       <span class="art-emoji"><%= product.emoji %></span>
     <% } else { %>

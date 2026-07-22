@@ -314,17 +314,10 @@
         <div class="field"><label>Description *</label><textarea name="description" required placeholder="A soft matte finish with lasting comfort."></textarea></div>
 
         <div class="field">
-          <label>Gallery photos <span class="text-muted" style="font-weight:400;">(up to 8)</span></label>
+          <label>Gallery photos <span class="text-muted" style="font-weight:400;">(up to 8 — the first photo is used as this product's cover image on the shop and homepage)</span></label>
           <div class="image-manager" id="product-images-grid"></div>
           <input type="file" id="product-image-input" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none;">
           <button class="btn btn-soft btn-sm" id="product-image-add" type="button">+ Add photos</button>
-        </div>
-
-        <div class="field">
-          <label>Model photo <span class="text-muted" style="font-weight:400;">(optional)</span></label>
-          <div class="image-manager" id="product-model-image-preview"></div>
-          <input type="file" id="product-model-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
-          <button class="btn btn-soft btn-sm" id="product-model-image-add" type="button">+ Add model photo</button>
         </div>
 
         <div class="field">
@@ -370,6 +363,42 @@
       </form>
     </div>
   </div>
+
+  <!-- Photo editor: crop / rotate / zoom any photo before it's uploaded, or
+       re-edit one already uploaded. Shared by every photo picker on this
+       page (product gallery, per-shade photos). -->
+  <div class="modal-backdrop" id="image-editor-modal">
+    <div class="modal modal-lg">
+      <div class="modal-head">
+        <h3>Edit photo</h3>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
+      </div>
+      <div class="image-editor-canvas-wrap">
+        <img id="image-editor-img" alt="">
+      </div>
+      <div class="image-editor-controls">
+        <button type="button" class="btn btn-soft btn-sm" id="image-editor-rotate-left" title="Rotate left">⟲ Rotate</button>
+        <button type="button" class="btn btn-soft btn-sm" id="image-editor-rotate-right" title="Rotate right">⟳ Rotate</button>
+        <button type="button" class="btn btn-soft btn-sm" id="image-editor-flip" title="Flip horizontally">⇋ Flip</button>
+        <button type="button" class="btn btn-soft btn-sm" id="image-editor-reset" title="Reset">Reset</button>
+        <label class="image-editor-zoom">
+          Zoom
+          <input type="range" id="image-editor-zoom" min="-1" max="2" step="0.05" value="0">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="image-editor-save" type="button">Save photo</button>
+      </div>
+      <div class="form-status" id="image-editor-status"></div>
+    </div>
+  </div>
+
+  <!-- Cropper.js: crop/rotate/zoom UI for the admin photo editor above.
+       Pure client-side, MIT-licensed. Swap for a self-hosted copy under
+       /public/vendor if you'd rather not depend on a third-party CDN. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 
   <%- include('partials/footer', { pageScript: 'admin' }) %>
 </body>

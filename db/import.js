@@ -91,21 +91,21 @@ async function main() {
   for (const p of products) {
     await sql.query(
       `INSERT INTO products (id, name, brand, price, sale_price, badge, emoji, category,
-         tone, description, stock, sold_out, images, model_image, scent_family, skin_goals, wink_map)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+         tone, description, stock, sold_out, images, scent_family, skin_goals, wink_map)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         p.id, p.name, p.brand || '', p.price || 0, p.salePrice || null, p.badge || '',
         p.emoji || '', p.category, p.tone || 0, p.description || '', p.stock || 0,
-        Boolean(p.soldOut), p.images || [], p.modelImage || '',
+        Boolean(p.soldOut), p.images || [],
         p.scentFamily || [], p.skinGoals || [], JSON.stringify(p.winkMap || {})
       ]
     );
     for (let i = 0; i < (p.shades || []).length; i++) {
       const s = p.shades[i];
       await sql.query(
-        `INSERT INTO product_shades (product_id, name, label, color, images, tint_photos, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [p.id, s.name, s.label || s.name, s.color || '#d9a08b', s.images || [], Boolean(s.tintPhotos), i]
+        `INSERT INTO product_shades (product_id, name, label, color, images, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [p.id, s.name, s.label || s.name, s.color || '#d9a08b', s.images || [], i]
       );
     }
     for (const r of (p.reviews || [])) {

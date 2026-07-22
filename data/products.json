@@ -34,8 +34,7 @@
         "images": [
           "/img/products/velvet-satin-liprosenude.jpg",
           "/img/products/velvet-satin-lip2.webp"
-        ],
-        "tintPhotos": true
+        ]
       },
       {
         "name": "Cocoa",
@@ -44,8 +43,7 @@
         "images": [
           "/img/products/velvet-satin-liprosenude.jpg",
           "/img/products/velvet-satin-lip2.webp"
-        ],
-        "tintPhotos": true
+        ]
       }
     ]
   },

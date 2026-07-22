@@ -48,23 +48,6 @@
     }, 3500);
   }
 
-  /* Shade-color tint for shades that reuse shared photos (e.g. the same
-     base swatch + model shot as another shade) — every photo in the
-     gallery gets tinted toward this shade's color, whichever one is
-     currently on screen. */
-  var tintAllPhotos = false;
-  var tintColor = '';
-
-  function updateModelTint() {
-    if (!shadeTint) return;
-    if (tintAllPhotos) {
-      shadeTint.style.backgroundColor = tintColor;
-      shadeTint.style.opacity = '0.55';
-    } else {
-      shadeTint.style.opacity = '0';
-    }
-  }
-
   function renderThumbs() {
     if (!galleryTrack) return;
     galleryTrack.innerHTML = '';
@@ -95,7 +78,6 @@
       });
     }
     maybeStartWink();
-    updateModelTint();
   }
 
   function setGallery(images) {
@@ -104,7 +86,6 @@
     if (galleryImages.length && galleryMainImg) galleryMainImg.src = galleryImages[0];
     renderThumbs();
     maybeStartWink();
-    updateModelTint();
   }
 
   if (galleryTrack) {
@@ -138,33 +119,11 @@
     B.$('#pdp-qty-plus').addEventListener('click', function () { setQty(currentQty() + 1); });
   }
 
-  /* Shade swatches — clicking one recolors the product photo to match. */
+  /* Shade swatches — clicking one swaps in that shade's own photos, if it has any. */
   var shadeSwatches = B.$$('#shade-swatches .shade-swatch');
   var shadeLabel = B.$('#shade-label');
-  var productArt = B.$('#product-art');
-  var shadeTint = B.$('#shade-tint');
-
-  function hexToHue(hex) {
-    hex = String(hex || '').trim().replace('#', '');
-    if (hex.length === 3) hex = hex.split('').map(function (c) { return c + c; }).join('');
-    if (hex.length !== 6) return null;
-    var r = parseInt(hex.substr(0, 2), 16) / 255;
-    var g = parseInt(hex.substr(2, 2), 16) / 255;
-    var b = parseInt(hex.substr(4, 2), 16) / 255;
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
-    var max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, h = 0;
-    if (d !== 0) {
-      if (max === r) h = ((g - b) / d) % 6;
-      else if (max === g) h = (b - r) / d + 2;
-      else h = (r - g) / d + 4;
-      h *= 60;
-      if (h < 0) h += 360;
-    }
-    return Math.round(h);
-  }
 
   function applyShade(swatch) {
-    var color = swatch.getAttribute('data-color');
     var label = swatch.getAttribute('data-label');
     var soldOut = swatch.getAttribute('data-sold-out') === '1';
     var stock = Number(swatch.getAttribute('data-stock')) || 0;
@@ -187,23 +146,7 @@
     }
 
     if (images.length) {
-      /* This shade reuses shared photos (data-tint-photos) rather than its
-         own dedicated set — tint every photo in the gallery toward this
-         shade's color instead of showing them in their native color. */
-      tintAllPhotos = swatch.getAttribute('data-tint-photos') === '1';
-      tintColor = color;
       setGallery(images);
-      return;
-    }
-
-    tintAllPhotos = false;
-    if (productArt) {
-      var hue = hexToHue(color);
-      if (hue !== null) productArt.style.setProperty('--tone', hue);
-    }
-    if (shadeTint) {
-      shadeTint.style.backgroundColor = color;
-      shadeTint.style.opacity = '0.55';
     }
   }
 

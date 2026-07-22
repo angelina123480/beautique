@@ -430,9 +430,6 @@ function applyProductFields(product, payload, validCategoryIds) {
           if (Array.isArray(shade.images)) {
             normalized.images = shade.images.map(String).map((value) => value.trim()).filter(Boolean);
           }
-          if (shade.tintPhotos) {
-            normalized.tintPhotos = true;
-          }
           return normalized;
         }
         const name = String(shade).trim();
@@ -452,7 +449,6 @@ function applyProductFields(product, payload, validCategoryIds) {
   if (payload.skinGoals !== undefined && Array.isArray(payload.skinGoals)) {
     product.skinGoals = payload.skinGoals.map(String).filter((tag) => SKIN_GOALS.has(tag));
   }
-  if (payload.modelImage !== undefined) product.modelImage = String(payload.modelImage).trim();
   /* Stock is the single source of truth for availability — otherwise a
      "Sold out" checkbox left checked from before a restock (it only gets
      checked automatically when stock hits 0, never unchecked automatically)
@@ -498,7 +494,6 @@ router.post('/products', auth.requireAdmin, ah(async (req, res) => {
     stock: 0,
     soldOut: false,
     images: [],
-    modelImage: '',
     reviews: []
   };
   applyProductFields(product, payload, validCategoryIds);

@@ -645,6 +645,64 @@
     }, { once: true });
   });
 
+  /* ---------------- Product-card shade-photo auto swipe ----------------
+     Cards for products with 2+ shades carrying their own photo cycle through
+     them on a timer. Uses two stacked <img> layers (front/back) that
+     crossfade+slide in opposite directions at the same time, rather than
+     fading one <img>'s src out and back in — with a single layer there's a
+     moment where nothing is visible, which flashes the card's plain
+     gradient background (looks like a broken/loading photo). With two
+     layers, one is always at full opacity while the other moves, so the
+     card never goes blank mid-swap.
+
+     Every frame is preloaded and decoded off-screen the moment the card
+     shows up, and a swap only starts once the incoming frame's decode has
+     resolved, so it never waits on the network mid-transition either. */
+  $$('.art-photo[data-shade-photos]').forEach(function (frontImg) {
+    var photos;
+    try { photos = JSON.parse(frontImg.getAttribute('data-shade-photos') || '[]'); } catch (e) { photos = []; }
+    if (photos.length < 2) return;
+
+    var decoded = photos.map(function (src) {
+      var pre = new Image();
+      pre.src = src;
+      return pre.decode ? pre.decode().catch(function () {}) : new Promise(function (resolve) {
+        if (pre.complete) return resolve();
+        pre.addEventListener('load', resolve, { once: true });
+        pre.addEventListener('error', resolve, { once: true });
+      });
+    });
+
+    var backImg = frontImg.cloneNode(false);
+    backImg.removeAttribute('data-shade-photos');
+    backImg.classList.add('is-swipe-in');
+    frontImg.insertAdjacentElement('afterend', backImg);
+
+    var front = frontImg;
+    var back = backImg;
+    var index = 0;
+
+    function swipeToNext() {
+      var nextIndex = (index + 1) % photos.length;
+      decoded[nextIndex].then(function () {
+        back.src = photos[nextIndex];
+        requestAnimationFrame(function () {
+          front.classList.add('is-swiping', 'is-swipe-out');
+          back.classList.add('is-swiping');
+          back.classList.remove('is-swipe-in');
+        });
+        setTimeout(function () {
+          front.classList.remove('is-swiping', 'is-swipe-out');
+          front.classList.add('is-swipe-in');
+          back.classList.remove('is-swiping');
+          index = nextIndex;
+          var swap = front; front = back; back = swap;
+        }, 520);
+      });
+    }
+    setInterval(swipeToNext, 3400);
+  });
+
   /* ---------------- Header shadow on scroll ---------------- */
 
   var siteHeader = $('.site-header');

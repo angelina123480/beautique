@@ -61,7 +61,6 @@ CREATE TABLE products (
   stock            INTEGER NOT NULL DEFAULT 0,
   sold_out         BOOLEAN NOT NULL DEFAULT FALSE,
   images           TEXT[] NOT NULL DEFAULT '{}',
-  model_image      TEXT NOT NULL DEFAULT '',
   scent_family     TEXT[] NOT NULL DEFAULT '{}',
   skin_goals       TEXT[] NOT NULL DEFAULT '{}',
   wink_map         JSONB NOT NULL DEFAULT '{}'  -- photo-url -> "eyes closed" photo-url lookup
@@ -74,7 +73,6 @@ CREATE TABLE product_shades (
   label        TEXT NOT NULL,
   color        TEXT NOT NULL DEFAULT '#d9a08b',
   images       TEXT[] NOT NULL DEFAULT '{}',
-  tint_photos  BOOLEAN NOT NULL DEFAULT FALSE,
   sort_order   INTEGER NOT NULL DEFAULT 0,
   stock        INTEGER NOT NULL DEFAULT 0  -- for shaded products, products.stock is derived from this (see lib/products.js)
 );

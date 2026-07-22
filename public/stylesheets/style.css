@@ -608,6 +608,15 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 #gallery-main-img.is-fading,
 .art-photo.is-fading { opacity: 0; }
 
+/* Auto-cycling shade-photo swipe on product cards (see app.js). Two stacked
+   .art-photo layers crossfade: is-swipe-out is the outgoing layer's target
+   (fading left), is-swipe-in is the incoming layer's resting/starting point
+   (parked off to the right until its turn) — both animate at once so the
+   card is always fully covered by one layer or the other. */
+.art-photo.is-swiping { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-in-out; }
+.art-photo.is-swipe-out { opacity: 0; transform: translateX(-14px); }
+.art-photo.is-swipe-in { opacity: 0; transform: translateX(14px); }
+
 /* Skeleton shimmer while a product photo is still loading */
 .product-art.is-img-loading::after,
 .gallery-main.is-img-loading::after {
@@ -1026,8 +1035,15 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 .field textarea { resize: vertical; min-height: 110px; }
 
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.field-row.shade-row { grid-template-columns: 1fr auto; align-items: end; margin-bottom: 10px; }
-.field-row.shade-row input[type="color"] { padding: 4px; height: 42px; width: 70px; cursor: pointer; }
+
+.shade-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+.shade-card .field-row { grid-template-columns: 1fr auto auto; align-items: end; }
+.shade-card input[type="color"] { padding: 4px; height: 42px; width: 70px; cursor: pointer; }
+.shade-card input[name="shadeStock"] { width: 80px; }
+.shade-photo-row { display: flex; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+.shade-photo-group { flex: 1; min-width: 180px; }
+.shade-photo-group > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.shade-photo-group .image-manager { min-height: 0; }
 
 /* Show/hide password toggle */
 .password-field { position: relative; }
@@ -1391,16 +1407,6 @@ img[src$="dawn-blush-peony.jpg"] {
 }
 .gallery-thumbs .thumb.is-active,
 .gallery-thumbs .thumb:hover { border-color: var(--primary); }
-
-/* Shade tint overlay — recolors a real product photo to match the selected shade. */
-.shade-tint {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  transition: background-color 0.3s ease, opacity 0.3s ease;
-}
 
 .shade-swatches { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
 .shade-swatch {
@@ -1766,6 +1772,31 @@ img[src$="dawn-blush-peony.jpg"] {
 }
 .modal-close:hover { background: var(--primary-soft); color: var(--primary-dark); }
 
+.image-editor-canvas-wrap {
+  width: 100%;
+  height: min(60vh, 480px);
+  background: #111;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.image-editor-canvas-wrap img { max-width: 100%; display: block; }
+.image-editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.image-editor-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-left: auto;
+}
+.image-editor-zoom input[type="range"] { width: 140px; }
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -1808,6 +1839,21 @@ img[src$="dawn-blush-peony.jpg"] {
   justify-content: center;
 }
 .image-thumb-remove:hover { background: var(--danger); }
+.image-thumb-edit {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(20, 12, 16, 0.65);
+  color: #fff;
+  font-size: 11px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.image-thumb-edit:hover { background: var(--primary); }
 
 /* Map modal */
 .map-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }

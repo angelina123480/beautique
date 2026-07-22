@@ -20,7 +20,6 @@
           <div class="gallery-main" id="gallery-main" data-wink-map='<%- JSON.stringify(product.winkMap || {}) %>'>
             <img id="gallery-main-img" src="<%= product.images[0] %>" alt="<%= product.name %>" style="width:100%; display:block; aspect-ratio:1/1; object-fit:cover;">
             <img id="gallery-wink-overlay" class="gallery-wink-overlay" alt="">
-            <div class="shade-tint" id="shade-tint"></div>
             <button type="button" class="gallery-arrow gallery-arrow-prev" id="gallery-prev" aria-label="Previous photo">‹</button>
             <button type="button" class="gallery-arrow gallery-arrow-next" id="gallery-next" aria-label="Next photo">›</button>
           </div>
@@ -29,9 +28,6 @@
           <div class="product-art gallery-main" id="product-art" style="--tone: <%= product.tone %>;">
             <span class="art-emoji" style="font-size: clamp(80px, 14vw, 130px);"><%- product.emoji ? product.emoji : icon('bottle') %></span>
           </div>
-        <% } %>
-        <% if (product.modelImage) { %>
-          <img src="<%= product.modelImage %>" alt="Model wearing <%= product.name %>" style="margin-top:18px; border-radius: var(--radius); box-shadow: var(--shadow-md);">
         <% } %>
       </div>
 
@@ -76,7 +72,7 @@
             <label>Shade <span id="shade-label" class="text-muted" style="font-weight: 400;"><%= product.selectedShade ? '— ' + product.selectedShade.label + (product.selectedShade.soldOut ? ' (Sold out)' : '') : '' %></span></label>
             <div class="shade-swatches" id="shade-swatches">
               <% product.shades.forEach(function(shade) { %>
-                <button type="button" class="shade-swatch <%= (product.selectedShade && shade.name === product.selectedShade.name) ? 'is-active' : '' %> <%= shade.soldOut ? 'is-sold-out' : '' %>" style="background-color: <%= shade.color %>;" data-name="<%= shade.name %>" data-label="<%= shade.label %>" data-color="<%= shade.color %>" data-images='<%- JSON.stringify(shade.images || []) %>' data-tint-photos="<%= shade.tintPhotos ? '1' : '' %>" data-stock="<%= shade.stock %>" data-sold-out="<%= shade.soldOut ? '1' : '' %>" aria-label="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>" title="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>"></button>
+                <button type="button" class="shade-swatch <%= (product.selectedShade && shade.name === product.selectedShade.name) ? 'is-active' : '' %> <%= shade.soldOut ? 'is-sold-out' : '' %>" style="background-color: <%= shade.color %>;" data-name="<%= shade.name %>" data-label="<%= shade.label %>" data-color="<%= shade.color %>" data-images='<%- JSON.stringify(shade.images || []) %>' data-stock="<%= shade.stock %>" data-sold-out="<%= shade.soldOut ? '1' : '' %>" aria-label="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>" title="<%= shade.label %><%= shade.soldOut ? ' (Sold out)' : '' %>"></button>
               <% }); %>
             </div>
             <a href="/shade-matcher" class="link-more" style="margin-top: 8px; display: inline-block;">Not sure which shade? Find your match →</a>
