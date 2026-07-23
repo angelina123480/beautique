@@ -19,6 +19,6 @@
     "express": "^4.21.2",
     "morgan": "^1.10.0",
     "multer": "^2.2.0",
-    "resend": "^6.17.2"
+    "nodemailer": "^9.0.3"
   }
 }

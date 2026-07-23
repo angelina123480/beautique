@@ -144,6 +144,6 @@ CREATE TABLE email_log (
   to_email   TEXT NOT NULL,
   subject    TEXT NOT NULL DEFAULT '',
   variant    TEXT NOT NULL DEFAULT '',
-  delivered  BOOLEAN NOT NULL DEFAULT FALSE,  -- whether Resend was configured at send time
+  delivered  BOOLEAN NOT NULL DEFAULT FALSE,  -- whether SMTP was configured at send time
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

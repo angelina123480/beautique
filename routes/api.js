@@ -136,7 +136,7 @@ async function issueOtp(user) {
   await users.updateUser(user.id, { otp, otpExpires: new Date(Date.now() + OTP_TTL_MS).toISOString() });
   /* Must be awaited, not fire-and-forget — on Vercel the function can be
      frozen the instant the response goes out, killing any still-pending
-     background work before it actually reaches Resend. */
+     background work before it actually reaches the SMTP server. */
   await emailService.sendEmail('otp', user.email, { firstName: user.name, otp }).catch(() => {});
   return emailService.isConfigured() ? undefined : otp;
 }

@@ -23,9 +23,9 @@ A modern beauty e-commerce demo built with **Node.js, Express 4, and EJS** — n
 - Order management: mark shipped / delivered, cancel with restock
 - Customer reviews and contact-form messages
 
-**Email** (via [Resend](https://resend.com), optional)
+**Email** (via free Gmail SMTP + [Nodemailer](https://nodemailer.com), optional)
 - OTP codes, order confirmations, status updates, cancellations, review + contact notifications
-- Without an API key the app runs in **dev mail mode**: emails are logged, and OTP codes appear directly in the UI so the demo always works
+- Without `SMTP_USER` / `SMTP_PASS` set, the app runs in **dev mail mode**: emails are logged, and OTP codes appear directly in the UI so the demo always works
 
 ## Quick start
 
@@ -46,7 +46,8 @@ Copy `.env.example` to `.env` (all values optional):
 | --- | --- |
 | `DATABASE_URL` | **Required.** Postgres connection string — see [Database](#database) below. |
 | `BLOB_READ_WRITE_TOKEN` | Image upload storage (admin dashboard). Leave blank locally (uploads save to `public/img/products/`). **Required on Vercel** for the same read-only-filesystem reason — add a Blob store from the Storage tab in your Vercel project and it injects this automatically. |
-| `RESEND_API_KEY` | Enables real email delivery |
+| `SMTP_USER` | Gmail address used to send mail (with an App Password) — enables real email delivery |
+| `SMTP_PASS` | 16-character Gmail App Password for `SMTP_USER` |
 | `EMAIL_FROM` | From address for outgoing mail |
 | `ADMIN_INVITE_CODE` | Code required to sign up as admin (default `BEAUTIQUE-ADMIN`) |
 | `PORT` | Server port (default `3000`) |
@@ -71,7 +72,7 @@ lib/emailLog.js       Sent-email log
 lib/auth.js           Sessions, password verification, auth middleware
 lib/passwords.js      Password hashing (scrypt)
 lib/catalog.js        Product decoration (ratings, availability)
-lib/emailService.js   Transactional email (Resend or dev mode)
+lib/emailService.js   Transactional email (Gmail SMTP or dev mode)
 lib/uploads.js        Image uploads: local files locally, Vercel Blob on Vercel
 routes/index.js       Page routes (server-rendered EJS)
 routes/api.js         JSON API (auth, products, orders, reviews, contact)
