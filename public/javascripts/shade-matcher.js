@@ -115,6 +115,186 @@
     ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
     canvas.style.display = '';
     placeholder.style.display = 'none';
+    var retakeBtn = B.$('#matcher-retake-btn');
+    if (retakeBtn) retakeBtn.style.display = '';
+
+    // A pristine snapshot to restore before every try-on preview — without
+    // it, re-tinting for a second shade would paint on top of the first
+    // instead of starting from the real photo again.
+    baseImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    clearTryOn();
+  }
+
+  /* ---------------- Try it on (virtual shade preview) ----------------
+     Which facial region a shade previews on depends on what kind of
+     product it is — a lipstick clips to the actual lip shape, but blush/
+     foundation/concealer have no equivalent "their own shape" the way lips
+     do, so they use soft feathered ellipses instead (a hard-edged fill
+     would look like a sticker, not makeup). There's no product field for
+     this in the catalog, so it's inferred from the product name — good
+     enough for real product names like "Dawn Blush" or "Foundation";
+     defaults to a lip preview for anything that doesn't match (e.g. a
+     mascara shade), which is at least a real color preview rather than
+     nothing. */
+  function regionForProduct(productName) {
+    var name = (productName || '').toLowerCase();
+    if (name.indexOf('concealer') !== -1) return 'concealer';
+    if (name.indexOf('blush') !== -1) return 'blush';
+    if (name.indexOf('foundation') !== -1) return 'foundation';
+    return 'lips';
+  }
+
+  function hexToRgba(hex, alpha) {
+    hex = String(hex || '').replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(function (c) { return c + c; }).join('');
+    var r = parseInt(hex.substr(0, 2), 16) || 0;
+    var g = parseInt(hex.substr(2, 2), 16) || 0;
+    var b = parseInt(hex.substr(4, 2), 16) || 0;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  /* A soft, center-opaque-fading-to-transparent-edge circle — reads as
+     blended makeup rather than a hard-edged sticker of color. */
+  function paintFeatheredEllipse(ctx, cx, cy, rx, ry, hex, alpha, blend) {
+    var gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry));
+    gradient.addColorStop(0, hexToRgba(hex, alpha));
+    gradient.addColorStop(1, hexToRgba(hex, 0));
+    ctx.save();
+    ctx.globalCompositeOperation = blend;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  var baseImageData = null;
+  var activeTryOn = null; // { hex, region }
+
+  function redrawTryOn() {
+    if (!baseImageData) return;
+    var ctx = canvas.getContext('2d');
+    ctx.putImageData(baseImageData, 0, 0);
+    if (!activeTryOn || !lastCapture) return;
+
+    var hex = activeTryOn.hex;
+
+    if (activeTryOn.region === 'lips') {
+      if (!lastCapture.lipPoints || !lastCapture.lipPoints.length) return;
+      ctx.save();
+      ctx.beginPath();
+      lastCapture.lipPoints.forEach(function (p, i) {
+        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.clip();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = hex;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      return;
+    }
+
+    if (activeTryOn.region === 'blush' && lastCapture.cheekCenters) {
+      var blushR = Math.max(16, lastCapture.faceWidth * 0.16);
+      lastCapture.cheekCenters.forEach(function (c) {
+        paintFeatheredEllipse(ctx, c.x, c.y, blushR, blushR * 0.75, hex, 0.5, 'multiply');
+      });
+      return;
+    }
+
+    if (activeTryOn.region === 'concealer' && lastCapture.underEyeCenters) {
+      var rx = lastCapture.faceWidth * 0.12;
+      var ry = lastCapture.faceWidth * 0.075;
+      lastCapture.underEyeCenters.forEach(function (c) {
+        // Concealer brightens/covers rather than tints, so 'lighten'
+        // (keeps whichever is lighter, photo or fill) reads truer here
+        // than the 'multiply' the color-based regions use.
+        paintFeatheredEllipse(ctx, c.x, c.y, rx, ry, hex, 0.55, 'lighten');
+      });
+      return;
+    }
+
+    if (activeTryOn.region === 'foundation' && lastCapture.faceBox) {
+      var box = lastCapture.faceBox;
+      paintFeatheredEllipse(
+        ctx,
+        box.x + box.width / 2,
+        box.y + box.height / 2,
+        box.width * 0.62,
+        box.height * 0.75,
+        hex,
+        0.3,
+        'multiply'
+      );
+    }
+  }
+
+  function applyTryOn(hex, region) {
+    if (!lastCapture || !lastCapture.faceBox) {
+      setStatus('Try-on needs a clear, front-facing photo with your face detected.', 'error');
+      return false;
+    }
+    activeTryOn = { hex: hex, region: region };
+    redrawTryOn();
+    var resetBtn = B.$('#matcher-tryon-reset');
+    if (resetBtn) resetBtn.style.display = '';
+    return true;
+  }
+
+  function clearTryOn() {
+    activeTryOn = null;
+    redrawTryOn();
+    B.$$('[data-tryon-hex]').forEach(function (btn) { btn.classList.remove('is-active'); });
+    var resetBtn = B.$('#matcher-tryon-reset');
+    if (resetBtn) resetBtn.style.display = 'none';
+  }
+
+  resultsBox.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-tryon-hex]');
+    if (!btn) return;
+    var applied = applyTryOn(btn.getAttribute('data-tryon-hex'), btn.getAttribute('data-tryon-region'));
+    if (applied) {
+      B.$$('[data-tryon-hex]', resultsBox).forEach(function (b) { b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+    }
+  });
+
+  var tryOnResetBtn = B.$('#matcher-tryon-reset');
+  if (tryOnResetBtn) {
+    tryOnResetBtn.addEventListener('click', clearTryOn);
+  }
+
+  /* Fully starts over — distinct from "Clear tint" above, which keeps the
+     same photo and only removes the try-on preview. This drops the photo
+     itself, so the upload/webcam controls further up the card are the way
+     back in (already visible; nothing to re-show there). */
+  function retakePhoto() {
+    stopWebcam();
+    canvas.style.display = 'none';
+    placeholder.style.display = '';
+    lastCapture = null;
+    baseImageData = null;
+    activeTryOn = null;
+    if (saveBtn) saveBtn.disabled = true;
+    setStatus('');
+
+    var retakeBtn = B.$('#matcher-retake-btn');
+    if (retakeBtn) retakeBtn.style.display = 'none';
+    if (tryOnResetBtn) tryOnResetBtn.style.display = 'none';
+
+    resultsBox.innerHTML =
+      '<div class="empty-state" style="padding: 40px 10px;">' +
+        '<span class="empty-emoji">' + window.BeautiqueIcons.lipstick + '</span>' +
+        '<h3>No photo yet</h3>' +
+        '<p>Capture or upload a photo to see your best-matching shade in every product that has shades.</p>' +
+      '</div>';
+  }
+
+  var retakeBtn = B.$('#matcher-retake-btn');
+  if (retakeBtn) {
+    retakeBtn.addEventListener('click', retakePhoto);
   }
 
   /* ---------------- Face detection + skin sampling ---------------- */
@@ -141,7 +321,14 @@
         setStatus('');
       }
 
-      lastCapture = { skinLab: result.skinLab };
+      lastCapture = {
+        skinLab: result.skinLab,
+        lipPoints: result.lipPoints,
+        cheekCenters: result.cheekCenters,
+        underEyeCenters: result.underEyeCenters,
+        faceBox: result.faceBox,
+        faceWidth: result.faceWidth
+      };
       if (saveBtn) saveBtn.disabled = false;
       renderResults(result.skinLab);
     });
@@ -241,12 +428,11 @@
         var img = new Image();
         img.onload = function () {
           drawToCanvas(img, img.naturalWidth, img.naturalHeight);
-          // We already have this photo's skin-tone reading saved, so we can
-          // skip re-running face detection entirely and jump straight to results.
-          setStatus('');
-          lastCapture = { skinLab: entry.skinLab };
-          if (saveBtn) saveBtn.disabled = false;
-          renderResults(entry.skinLab);
+          // The skin-tone reading was already saved, but lip points for the
+          // try-on preview weren't — re-running detection is cheap (tiny
+          // detector, one face) and keeps try-on available here too, rather
+          // than only for a freshly-captured photo.
+          runMatch();
         };
         img.src = entry.photoDataUrl;
         return;
@@ -294,15 +480,17 @@
       // Rough, non-scientific "closeness" label from the CIE94 distance —
       // under ~2 is essentially imperceptible, under ~10 reads as "close".
       var closeness = shade.distance < 5 ? 'Excellent match' : shade.distance < 12 ? 'Good match' : 'Closest available';
+      var region = regionForProduct(shade.productName);
       return '' +
-        '<a class="matcher-result reveal" href="/product/' + shade.productId + '?shade=' + encodeURIComponent(shade.shadeSlug || '') + '" style="transition-delay:' + (i * 0.08).toFixed(2) + 's;">' +
+        '<div class="matcher-result reveal" style="transition-delay:' + (i * 0.08).toFixed(2) + 's;">' +
           '<span class="matcher-swatch" style="background:' + shade.hex + ';"></span>' +
           '<span class="matcher-result-info">' +
             '<strong>' + B.escapeHtml(shade.productName) + '</strong>' +
             '<span class="text-muted">' + B.escapeHtml(shade.shadeName) + ' · ' + closeness + '</span>' +
           '</span>' +
-          '<span class="btn btn-soft btn-sm">Shop this shade</span>' +
-        '</a>';
+          '<button type="button" class="btn btn-ghost btn-sm" data-tryon-hex="' + shade.hex + '" data-tryon-region="' + region + '">Try it on</button>' +
+          '<a class="btn btn-soft btn-sm" href="/product/' + shade.productId + '?shade=' + encodeURIComponent(shade.shadeSlug || '') + '">Shop this shade</a>' +
+        '</div>';
     }).join('');
 
     // Trigger the fade/slide-in (same .reveal pattern used site-wide).

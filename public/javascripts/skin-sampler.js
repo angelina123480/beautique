@@ -98,10 +98,37 @@
     };
   }
 
+  /* Points 48-59 of the 68-point layout trace the outer lip boundary (60-67
+     are the inner boundary/mouth opening) — exactly the shape a "try it on"
+     lip-color preview needs to clip to. Pulled from the same detection pass
+     used for skin sampling, so previewing a shade never needs a second
+     face-detection run. */
+  function outerLipPoints(points) {
+    return points.slice(48, 60);
+  }
+
+  /* Center point just below each eye's lower lid — where a concealer
+     preview reads as "under-eye" rather than sitting on the eye itself. */
+  function underEyeCenters(points) {
+    var rightBottom = { x: (points[40].x + points[41].x) / 2, y: (points[40].y + points[41].y) / 2 };
+    var leftBottom = { x: (points[46].x + points[47].x) / 2, y: (points[46].y + points[47].y) / 2 };
+    var faceWidth = points[16].x - points[0].x;
+    var dy = faceWidth * 0.07;
+    return [
+      { x: rightBottom.x, y: rightBottom.y + dy },
+      { x: leftBottom.x, y: leftBottom.y + dy }
+    ];
+  }
+
   /* Runs detection + sampling on a canvas that already has a photo drawn
      to it. Resolves to one of:
-       { ok: true, skinLab, lighting: 'ok' | 'dark' | 'bright' }
-       { ok: false, reason: 'no-face' | 'sampling-failed' | 'error', message } */
+       { ok: true, skinLab, lighting: 'ok' | 'dark' | 'bright',
+         lipPoints, cheekCenters, underEyeCenters, faceBox, faceWidth }
+       { ok: false, reason: 'no-face' | 'sampling-failed' | 'error', message }
+     The extra geometry (beyond skinLab/lighting, which is all sampling ever
+     needed before) is for the shade matcher's "try it on" preview — handing
+     back ready-to-use points/box means shade-matcher.js never has to know
+     the raw 68-point index layout itself. */
   function sampleFromCanvas(canvas) {
     return ensureModelsLoaded().then(function () {
       return faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
@@ -111,10 +138,11 @@
       }
 
       var ctx = canvas.getContext('2d');
+      var points = detection.landmarks.positions;
       var faceSize = detection.detection.box.width;
       var sampleSize = Math.max(12, Math.round(faceSize * 0.12));
-      var centers = cheekSampleCenters(detection.landmarks.positions);
-      var samples = centers
+      var cheekCenters = cheekSampleCenters(points);
+      var samples = cheekCenters
         .map(function (c) { return sampleRegionColor(ctx, c.x, c.y, sampleSize); })
         .filter(Boolean);
 
@@ -132,7 +160,16 @@
       var skinLab = CS.rgbToLab(avg.r, avg.g, avg.b);
       var lighting = skinLab.l < 30 ? 'dark' : skinLab.l > 88 ? 'bright' : 'ok';
 
-      return { ok: true, skinLab: skinLab, lighting: lighting };
+      return {
+        ok: true,
+        skinLab: skinLab,
+        lighting: lighting,
+        lipPoints: outerLipPoints(points),
+        cheekCenters: cheekCenters,
+        underEyeCenters: underEyeCenters(points),
+        faceBox: { x: detection.detection.box.x, y: detection.detection.box.y, width: detection.detection.box.width, height: detection.detection.box.height },
+        faceWidth: points[16].x - points[0].x
+      };
     }).catch(function (err) {
       console.error(err);
       return { ok: false, reason: 'error', message: 'Something went wrong analyzing that photo. Please try again.' };

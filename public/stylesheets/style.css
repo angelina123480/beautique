@@ -2423,6 +2423,16 @@ img[src$="dawn-blush-peony.jpg"] {
   flex-shrink: 0;
 }
 .matcher-result-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.matcher-result [data-tryon-hex].is-active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.matcher-frame-btn {
+  position: absolute;
+  top: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.matcher-frame-btn-left { left: 10px; }
+.matcher-frame-btn-right { right: 10px; }
 
 .matcher-season-picker { display: flex; gap: 8px; margin-bottom: 12px; }
 .matcher-season-btn {
