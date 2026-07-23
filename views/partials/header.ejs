@@ -55,7 +55,7 @@
       <% if (user) { %>
         <a href="/profile#rewards-card" class="points-pill" title="Your reward points"><%- icon('star') %> <%= user.rewardPoints %></a>
       <% } %>
-      <a class="icon-btn" href="<%= user ? '/profile' : '/auth' %>" title="<%= user ? 'My account' : 'Sign in' %>" aria-label="Account">
+      <a class="icon-btn icon-btn-account" href="<%= user ? '/profile' : '/auth' %>" title="<%= user ? 'My account' : 'Sign in' %>" aria-label="Account">
         <%- icon('user') %>
       </a>
       <a class="icon-btn" href="/wishlist" title="Your wishlist" aria-label="Open wishlist">

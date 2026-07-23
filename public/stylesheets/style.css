@@ -923,16 +923,32 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 .stars-empty { display: inline-block; font-size: 12.5px; color: var(--muted); }
 
 .card-shade-dots { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
+/* The tappable link is a real 28px touch target; the visible colored
+   swatch stays a compact 16px circle centered inside it via ::before
+   (which inherits the color from the anchor's own inline background-color
+   style — background-color isn't inherited by default, but `inherit`
+   forces it regardless). Keeps the dots visually dainty while still being
+   comfortably tappable on a phone. */
 .shade-dot {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.shade-dot::before {
+  content: '';
   width: 16px;
   height: 16px;
   border-radius: 50%;
   border: 1.5px solid rgba(0, 0, 0, 0.1);
-  flex: none;
+  background-color: inherit;
   transition: transform 0.15s ease;
 }
-.shade-dot:hover { transform: scale(1.2); }
-.shade-dot.is-sold-out { opacity: 0.35; }
+.shade-dot:hover::before { transform: scale(1.2); }
+.shade-dot.is-sold-out::before { opacity: 0.35; }
 .shade-dot-more { font-size: 11.5px; font-weight: 600; color: var(--muted); }
 
 .stock-pill {
@@ -2515,6 +2531,41 @@ img[src$="dawn-blush-peony.jpg"] {
   .newsletter-band { grid-template-columns: 1fr; padding: 38px 28px; }
   .map-layout { grid-template-columns: 1fr; }
   .announce .announce-msg { display: none; }
+
+  /* At this width .main-nav is already hidden behind the hamburger, so the
+     header is just brand + icons — on a narrow phone (~375px) the brand
+     wordmark plus every icon at full size genuinely doesn't fit in one row
+     (it was close before, and adding the search icon pushed it over). Trim
+     the brand down and drop the account icon specifically, since the
+     hamburger's own mobile-nav already has an identical "My account"/
+     "Sign in" link — nothing is lost, just de-duplicated. */
+  .brand { font-size: 19px; gap: 6px; letter-spacing: 0.1em; }
+  .brand img { width: 30px; height: 30px; }
+  .points-pill { display: none; }
+  .header-actions { gap: 0; }
+  .icon-btn-account { display: none; }
+
+  /* The search panel is normally anchored to its own icon (fine on desktop,
+     where the icon sits near the header's right edge) — but the icon isn't
+     the rightmost thing in the header, so anchoring the same way on a
+     narrow phone could push the panel's left edge off-screen. Removing
+     .header-search as the positioning context makes .search-panel anchor
+     to .site-header (sticky, so still a valid containing block) instead,
+     spanning the full header width regardless of where the icon sits. */
+  .header-search { position: static; }
+  .search-panel {
+    left: 16px;
+    right: 16px;
+    top: 100%;
+    width: auto;
+    max-width: none;
+  }
+
+  /* Extra safety margin — brand + remaining icons fit within the smallest
+     common phone width even after the trims above, but the explicit 24px
+     gap between them (fine on desktop) eats into that margin unnecessarily
+     on a ~375px screen. */
+  .site-header .container { gap: 8px; }
 }
 
 @media (max-width: 560px) {
