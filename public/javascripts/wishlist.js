@@ -18,7 +18,7 @@
     return '' +
       '<article class="product-card reveal is-visible">' +
         '<button type="button" class="wishlist-btn is-active" data-id="' + item.id + '" data-name="' + name + '" data-price="' + item.price + '" data-emoji="' + B.escapeHtml(item.emoji || '') + '" data-tone="' + tone + '" data-image="' + B.escapeHtml(item.image || '') + '" data-stock="' + stock + '" aria-label="Remove ' + name + ' from wishlist" aria-pressed="true">' + window.BeautiqueIcons.heart + '</button>' +
-        '<a href="/product/' + item.id + '" class="product-art" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
+        '<a href="/product/' + item.id + '" class="product-art' + (item.image ? ' has-photo' : '') + '" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
         '<div class="product-card-body">' +
           '<h3><a href="/product/' + item.id + '">' + name + '</a></h3>' +
           '<div class="product-card-foot">' +

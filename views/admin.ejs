@@ -71,7 +71,13 @@
                 <tr data-product-row="<%= product.id %>">
                   <td>
                     <div style="display:flex; align-items:center; gap: 12px;">
-                      <span class="product-art product-art--sm" style="--tone: <%= product.tone %>; width: 46px; border-radius: 12px;"><span class="art-emoji" style="font-size: 22px;"><%= product.emoji %></span></span>
+                      <span class="product-art product-art--sm <%= (product.images && product.images.length) ? 'has-photo' : '' %>" style="--tone: <%= product.tone %>; width: 46px; border-radius: 12px;">
+                        <% if (product.images && product.images.length) { %>
+                          <img class="art-photo" src="<%= product.images[0] %>" alt="" loading="lazy">
+                        <% } else { %>
+                          <span class="art-emoji" style="font-size: 22px;"><%= product.emoji || icon('bottle') %></span>
+                        <% } %>
+                      </span>
                       <div>
                         <strong><%= product.name %></strong><br>
                         <span class="text-muted" style="font-size: 12.5px;"><%= product.brand %> · <%= product.category %></span>

@@ -2,19 +2,20 @@
   var metaDescription = typeof ogDescription !== 'undefined' && ogDescription
     ? ogDescription
     : 'Beautique — radiant makeup, nourishing skincare, and elegant scents in one curated beauty destination.';
-  /* No branded placeholder image ships in this repo — rather than pointing
-     og:image at something generic/misleading, the tag is only emitted when
-     a real photo (e.g. a product's own image) is actually passed in. */
+  /* Falls back to the logo for pages with no photo of their own (e.g. the
+     shop listing or About), so a shared link always has some brand image
+     rather than none. */
   var metaImage = typeof ogImage !== 'undefined' && ogImage
     ? (ogImage.indexOf('http') === 0 ? ogImage : siteUrl + ogImage)
-    : null;
+    : siteUrl + '/img/logo.png?v=' + assetVersion('img/logo.png');
   var metaType = typeof ogType !== 'undefined' && ogType ? ogType : 'website';
 %>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beautique — <%= page %></title>
 <meta name="description" content="<%= metaDescription %>">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="64x64" href="/img/favicon-64.png?v=<%= assetVersion('img/favicon-64.png') %>">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png?v=<%= assetVersion('img/favicon-32.png') %>">
 
 <meta property="og:site_name" content="Beautique">
 <meta property="og:type" content="<%= metaType %>">

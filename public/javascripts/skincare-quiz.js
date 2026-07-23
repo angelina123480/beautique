@@ -136,7 +136,7 @@
       '<div class="quiz-result">' +
         '<span class="eyebrow">Your skin goal: ' + B.escapeHtml(topGoals.join(' & ') || 'Balanced') + '</span>' +
         '<h3 style="font-size: 26px;">' + B.escapeHtml(top.name) + '</h3>' +
-        '<div class="product-art quiz-result-art" style="--tone:' + (Number(top.tone) || 340) + ';">' + art + '</div>' +
+        '<div class="product-art quiz-result-art' + (top.image ? ' has-photo' : '') + '" style="--tone:' + (Number(top.tone) || 340) + ';">' + art + '</div>' +
         '<p class="text-muted">' + B.escapeHtml(top.description || '') + '</p>' +
         '<div class="quiz-result-price">' + priceHtml + '</div>' +
         '<div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px;">' +

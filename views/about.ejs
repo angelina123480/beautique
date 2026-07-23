@@ -22,7 +22,7 @@
       </div>
       <div class="grid grid-2">
         <% showcase.forEach(function(product, i) { %>
-          <div class="product-art reveal" style="--tone: <%= product.tone %>; <%= i === 1 ? 'transform: translateY(18px);' : '' %>">
+          <div class="product-art reveal <%= (product.images && product.images.length) ? 'has-photo' : '' %>" style="--tone: <%= product.tone %>; <%= i === 1 ? 'transform: translateY(18px);' : '' %>">
             <% if (product.images && product.images.length) { %>
               <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
             <% } else { %>

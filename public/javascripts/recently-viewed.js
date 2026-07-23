@@ -20,7 +20,7 @@
 
     return '' +
       '<article class="product-card reveal is-visible">' +
-        '<a href="/product/' + item.id + '" class="product-art" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
+        '<a href="/product/' + item.id + '" class="product-art' + (item.image ? ' has-photo' : '') + '" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
         '<div class="product-card-body">' +
           '<h3><a href="/product/' + item.id + '">' + name + '</a></h3>' +
           '<div class="product-card-foot">' +

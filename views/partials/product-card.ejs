@@ -17,7 +17,7 @@
           data-stock="<%= product.stock %>"
           data-has-shades="<%= product.shades && product.shades.length ? '1' : '' %>"
           aria-label="Save <%= product.name %> to wishlist" aria-pressed="false"><%- icon('heart') %></button>
-  <a href="/product/<%= product.id %>" class="product-art" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
+  <a href="/product/<%= product.id %>" class="product-art <%= (product.images && product.images.length) ? 'has-photo' : '' %>" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
     <% if (product.images && product.images.length) { %>
       <img class="art-photo" src="<%= (cardShadePhotos[0]) || product.images[0] %>" alt="<%= product.name %>" loading="lazy"
            <% if (cardShadePhotos.length > 1) { %>data-shade-photos='<%- JSON.stringify(cardShadePhotos) %>'<% } %>>

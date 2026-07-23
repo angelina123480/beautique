@@ -25,7 +25,7 @@
 
     return '' +
       '<article class="product-card reveal is-visible">' +
-        '<a href="/product/' + item.id + '" class="product-art" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
+        '<a href="/product/' + item.id + '" class="product-art' + ((item.images && item.images[0]) ? ' has-photo' : '') + '" style="--tone:' + tone + ';" aria-label="' + name + '">' + art + '</a>' +
         '<div class="product-card-body">' +
           '<span class="product-brand">' + B.escapeHtml(item.brand || '') + '</span>' +
           '<h3><a href="/product/' + item.id + '">' + name + '</a></h3>' +
