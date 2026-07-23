@@ -107,6 +107,7 @@
       var open = $$('.modal-backdrop.is-open');
       if (open.length) open.forEach(function (m) { closeModal(m); });
       closeCartDrawer();
+      closeSearchPanel();
       return;
     }
     if (e.key === 'Tab') {
@@ -521,6 +522,34 @@
     localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(list.slice(0, RECENTLY_VIEWED_MAX)));
   }
 
+  /* Search history — every completed search (from the header search panel
+     or the shop page's own search box) lands on /shop?search=..., so
+     recording it there (see shop.js) covers every entry point with one
+     hook rather than needing to intercept each search form. */
+  var SEARCH_HISTORY_KEY = 'beautiqueSearchHistory';
+  var SEARCH_HISTORY_MAX = 8;
+
+  function getSearchHistory() {
+    try {
+      var list = JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function recordSearch(term) {
+    term = String(term || '').trim();
+    if (!term) return;
+    var list = getSearchHistory().filter(function (line) { return line.toLowerCase() !== term.toLowerCase(); });
+    list.unshift(term);
+    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(list.slice(0, SEARCH_HISTORY_MAX)));
+  }
+
+  function clearSearchHistory() {
+    localStorage.removeItem(SEARCH_HISTORY_KEY);
+  }
+
   function renderWishlistState() {
     var ids = getWishlist().map(function (item) { return item.id; });
     $$('.wishlist-btn').forEach(function (btn) {
@@ -825,6 +854,65 @@
     window.addEventListener('scroll', updateHeaderShadow, { passive: true });
   }
 
+  /* ---------------- Header search panel ---------------- */
+
+  var searchToggle = $('#search-toggle');
+  var searchPanel = $('#search-panel');
+  var searchInput = $('#header-search-input');
+  var searchHistoryEl = $('#search-history');
+
+  function renderSearchHistory() {
+    if (!searchHistoryEl) return;
+    var terms = getSearchHistory();
+    if (!terms.length) {
+      searchHistoryEl.innerHTML = '';
+      return;
+    }
+    searchHistoryEl.innerHTML =
+      '<div class="search-history-head"><span>Recent searches</span><button type="button" id="search-history-clear">Clear</button></div>' +
+      '<div class="search-history-list">' +
+        terms.map(function (term) {
+          return '<a href="/shop?search=' + encodeURIComponent(term) + '" class="search-history-item">' + escapeHtml(term) + '</a>';
+        }).join('') +
+      '</div>';
+  }
+
+  function openSearchPanel() {
+    if (!searchPanel) return;
+    renderSearchHistory();
+    searchPanel.classList.add('is-open');
+    searchToggle.setAttribute('aria-expanded', 'true');
+    if (searchInput) searchInput.focus();
+  }
+
+  function closeSearchPanel() {
+    if (!searchPanel || !searchPanel.classList.contains('is-open')) return;
+    searchPanel.classList.remove('is-open');
+    searchToggle.setAttribute('aria-expanded', 'false');
+  }
+
+  if (searchToggle) {
+    searchToggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (searchPanel.classList.contains('is-open')) {
+        closeSearchPanel();
+      } else {
+        openSearchPanel();
+      }
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.id === 'search-history-clear') {
+      clearSearchHistory();
+      renderSearchHistory();
+      return;
+    }
+    if (searchPanel && searchPanel.classList.contains('is-open') && !e.target.closest('.header-search')) {
+      closeSearchPanel();
+    }
+  });
+
   renderCart();
   renderWishlistState();
 
@@ -861,6 +949,11 @@
     recentlyViewed: {
       get: getRecentlyViewed,
       record: recordRecentlyViewed
+    },
+    searchHistory: {
+      get: getSearchHistory,
+      record: recordSearch,
+      clear: clearSearchHistory
     },
     seasonalShades: {
       get: getSeasonalShades,

@@ -3,6 +3,15 @@
   'use strict';
   var B = window.Beautique;
 
+  /* Records to search history however the visitor got here — the header
+     search panel, this page's own search box, or a direct/shared link —
+     since every completed search lands here with ?search=... regardless
+     of entry point. */
+  var searchInput = B.$('#shop-search-input');
+  if (searchInput && searchInput.value.trim()) {
+    B.searchHistory.record(searchInput.value);
+  }
+
   var sort = B.$('#shop-sort');
   if (sort) {
     sort.addEventListener('change', function () {

@@ -32,6 +32,18 @@
     </nav>
 
     <div class="header-actions">
+      <div class="header-search">
+        <button class="icon-btn" id="search-toggle" type="button" title="Search" aria-label="Search" aria-expanded="false">
+          <%- icon('search') %>
+        </button>
+        <div class="search-panel" id="search-panel">
+          <form action="/shop" method="get" id="header-search-form">
+            <input type="text" name="search" id="header-search-input" placeholder="Search products, brands…" autocomplete="off">
+            <button type="submit" aria-label="Search"><%- icon('search') %></button>
+          </form>
+          <div id="search-history"></div>
+        </div>
+      </div>
       <% if (user) { %>
         <a href="/profile#rewards-card" class="points-pill" title="Your reward points"><%- icon('star') %> <%= user.rewardPoints %></a>
       <% } %>
