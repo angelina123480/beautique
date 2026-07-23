@@ -23,17 +23,26 @@
         </div>
       </div>
       <div class="hero-collage">
-        <% arrivals.slice(0, 2).forEach(function(product) { %>
-          <a href="/product/<%= product.id %>" class="product-art hero-tile <%= (product.images && product.images.length) ? 'has-photo' : '' %>" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
-            <% if (product.images && product.images.length) { %>
-              <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
-            <% } else if (product.emoji) { %>
-              <span class="art-emoji"><%= product.emoji %></span>
-            <% } else { %>
-              <span class="art-emoji"><%- icon('bottle') %></span>
-            <% } %>
+        <% if (siteSettings.heroVideoUrl) { %>
+          <a href="<%= heroVideoProduct ? '/product/' + heroVideoProduct.id : '/shop' %>" class="hero-video-tile"
+             aria-label="<%= heroVideoProduct ? 'Shop ' + heroVideoProduct.name : 'Shop the collection' %>">
+            <video src="<%= siteSettings.heroVideoUrl %>" autoplay muted loop playsinline
+                   <% if (heroVideoProduct && heroVideoProduct.images && heroVideoProduct.images[0]) { %>poster="<%= heroVideoProduct.images[0] %>"<% } %>></video>
+            <% if (heroVideoProduct) { %><span class="hero-video-caption">Shop <%= heroVideoProduct.name %> →</span><% } %>
           </a>
-        <% }); %>
+        <% } else { %>
+          <% arrivals.slice(0, 2).forEach(function(product) { %>
+            <a href="/product/<%= product.id %>" class="product-art hero-tile <%= (product.images && product.images.length) ? 'has-photo' : '' %>" style="--tone: <%= product.tone %>;" aria-label="<%= product.name %>">
+              <% if (product.images && product.images.length) { %>
+                <img class="art-photo" src="<%= product.images[0] %>" alt="<%= product.name %>" loading="lazy">
+              <% } else if (product.emoji) { %>
+                <span class="art-emoji"><%= product.emoji %></span>
+              <% } else { %>
+                <span class="art-emoji"><%- icon('bottle') %></span>
+              <% } %>
+            </a>
+          <% }); %>
+        <% } %>
         <div class="hero-note"><span class="dot"></span> Free shipping over $50</div>
       </div>
     </div>

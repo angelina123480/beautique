@@ -742,6 +742,17 @@
     });
   }
 
+  /* ---------------- Reduced motion for the hero video ----------------
+     The blanket `prefers-reduced-motion` rule in style.css only stops CSS
+     animations/transitions — a <video autoplay> keeps playing regardless,
+     so it needs its own check. */
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    $$('.hero-video-tile video').forEach(function (v) {
+      v.removeAttribute('autoplay');
+      v.pause();
+    });
+  }
+
   /* ---------------- Reveal on scroll ---------------- */
 
   if ('IntersectionObserver' in window) {

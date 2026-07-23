@@ -27,6 +27,7 @@ const icons = require('./lib/icons');
 const rewards = require('./lib/rewards');
 const scents = require('./lib/scents');
 const skinGoals = require('./lib/skin-goals');
+const siteSettingsLib = require('./lib/siteSettings');
 
 const app = express();
 
@@ -93,6 +94,15 @@ app.use((req, res, next) => {
   res.locals.siteUrl = req.protocol + '://' + req.get('host');
   res.locals.currentPath = req.originalUrl;
   next();
+});
+
+/* Admin-editable site settings (logo, homepage hero video) — fetched once
+   per request so every view can use them without each route handler
+   needing to fetch and pass them through individually. */
+app.use((req, res, next) => {
+  siteSettingsLib.getSettings()
+    .then((settings) => { res.locals.siteSettings = settings; next(); })
+    .catch(next);
 });
 
 app.use(auth.attachUser);

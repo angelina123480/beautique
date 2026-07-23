@@ -81,6 +81,9 @@ router.get('/', ah(async (req, res) => {
     recommended = recommended.slice(0, 4);
   }
 
+  const heroVideoProductId = res.locals.siteSettings.heroVideoProductId;
+  const heroVideoProduct = heroVideoProductId ? products.find((product) => product.id === heroVideoProductId) : null;
+
   res.render('index', {
     page: 'Home',
     menuId: 'home',
@@ -90,7 +93,8 @@ router.get('/', ah(async (req, res) => {
     sale,
     recommended,
     categories: categoryList,
-    testimonials: testimonials.slice(0, 3)
+    testimonials: testimonials.slice(0, 3),
+    heroVideoProduct
   });
 }));
 

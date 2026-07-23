@@ -42,6 +42,7 @@
       <button type="button" data-tab="orders">Orders (<%= orders.length %>)</button>
       <button type="button" data-tab="reviews">Reviews (<%= reviews.length %>)</button>
       <button type="button" data-tab="messages">Messages (<%= messages.length %>)</button>
+      <button type="button" data-tab="site">Site &amp; branding</button>
     </div>
 
     <!-- Products -->
@@ -262,6 +263,35 @@
             </div>
           <% }); %>
         <% } %>
+      </div>
+    </div>
+
+    <!-- Site & branding -->
+    <div class="tab-panel" id="tab-site">
+      <div class="card">
+        <h3 style="font-size: 22px; margin-bottom: 4px;">Site logo</h3>
+        <p class="text-muted" style="font-size:13.5px; margin-bottom:16px;">Shown in the header, the footer, and as the default link-preview image when a page is shared.</p>
+        <div class="image-manager" id="site-logo-preview" data-current="<%= siteSettings.logoUrl %>"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="site-logo-add">Change logo</button>
+        <input type="file" id="site-logo-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+      </div>
+
+      <div class="card" style="margin-top:24px;">
+        <h3 style="font-size: 22px; margin-bottom: 4px;">Homepage hero video</h3>
+        <p class="text-muted" style="font-size:13.5px; margin-bottom:16px;">Replaces the homepage's product-photo collage with a looping video. Short clips only — under 4MB, muted, no sound needed.</p>
+        <div class="image-manager" id="site-video-preview" data-current="<%= siteSettings.heroVideoUrl || '' %>"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="site-video-add">Upload video</button>
+        <input type="file" id="site-video-input" accept="video/mp4,video/webm" style="display:none;">
+        <div class="field" style="margin-top:18px; max-width:320px;">
+          <label>Featured product <span class="text-muted" style="font-weight:400;">(linked from the video)</span></label>
+          <select class="select-pill" id="site-video-product">
+            <option value="">None</option>
+            <% products.forEach(function(p) { %>
+              <option value="<%= p.id %>" <%= siteSettings.heroVideoProductId === p.id ? 'selected' : '' %>><%= p.name %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="form-status" id="site-settings-status"></div>
       </div>
     </div>
   </section>

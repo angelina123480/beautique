@@ -619,10 +619,38 @@ svg { width: 1em; height: 1em; display: inline-block; vertical-align: middle; fl
 .hero-tile:nth-child(2) { transform: translateY(26px); }
 .hero-tile:nth-child(2):hover { transform: translateY(20px) rotate(1deg); }
 
+.hero-video-tile {
+  grid-column: 1 / -1;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  display: block;
+}
+.hero-video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hero-video-caption {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  background: rgba(51, 32, 43, 0.72);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
 .hero-note {
   position: absolute;
   bottom: -18px;
-  left: -14px;
+  right: -14px;
   background: var(--surface);
   border-radius: 16px;
   box-shadow: var(--shadow-md);

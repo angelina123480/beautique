@@ -5,9 +5,12 @@
   /* Falls back to the logo for pages with no photo of their own (e.g. the
      shop listing or About), so a shared link always has some brand image
      rather than none. */
+  var defaultLogoSrc = siteSettings.logoUrl === '/img/logo.png'
+    ? '/img/logo.png?v=' + assetVersion('img/logo.png')
+    : siteSettings.logoUrl;
   var metaImage = typeof ogImage !== 'undefined' && ogImage
     ? (ogImage.indexOf('http') === 0 ? ogImage : siteUrl + ogImage)
-    : siteUrl + '/img/logo.png?v=' + assetVersion('img/logo.png');
+    : (defaultLogoSrc.indexOf('http') === 0 ? defaultLogoSrc : siteUrl + defaultLogoSrc);
   var metaType = typeof ogType !== 'undefined' && ogType ? ogType : 'website';
 %>
 <meta charset="utf-8">

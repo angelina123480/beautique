@@ -652,6 +652,104 @@
         setStatus(err.message, 'error');
       });
     });
+
+    /* Site & branding — logo and homepage hero video. Reuses editAndUpload
+       (crop editor) for the logo since it's just another photo; the video
+       has no crop step, just a direct upload through the media endpoint. */
+    var siteLogoPreview = B.$('#site-logo-preview');
+    if (siteLogoPreview) {
+      var currentLogoUrl = siteLogoPreview.getAttribute('data-current') || '';
+      var currentVideoUrl = B.$('#site-video-preview').getAttribute('data-current') || '';
+      var siteLogoInput = B.$('#site-logo-input');
+      var siteVideoInput = B.$('#site-video-input');
+      var siteVideoPreview = B.$('#site-video-preview');
+      var siteVideoProductSelect = B.$('#site-video-product');
+      var siteSettingsStatus = B.$('#site-settings-status');
+
+      function renderSiteLogoPreview() {
+        siteLogoPreview.innerHTML = currentLogoUrl
+          ? '<div class="image-thumb"><img src="' + B.escapeHtml(currentLogoUrl) + '">' +
+            '<button type="button" class="image-thumb-edit" data-edit-site-logo>Edit</button></div>'
+          : '';
+      }
+
+      function renderSiteVideoPreview() {
+        siteVideoPreview.innerHTML = currentVideoUrl
+          ? '<div class="image-thumb"><video src="' + B.escapeHtml(currentVideoUrl) + '" style="width:100%; height:100%; object-fit:cover;" muted></video>' +
+            '<button type="button" class="image-thumb-remove" data-remove-site-video aria-label="Remove video">' + window.BeautiqueIcons.close + '</button></div>'
+          : '';
+      }
+
+      function saveSiteSettings() {
+        return B.api('/api/admin/site-settings', {
+          method: 'PATCH',
+          body: {
+            logoUrl: currentLogoUrl,
+            heroVideoUrl: currentVideoUrl,
+            heroVideoProductId: siteVideoProductSelect.value ? Number(siteVideoProductSelect.value) : null
+          }
+        }).then(function () {
+          siteSettingsStatus.textContent = 'Saved.';
+          siteSettingsStatus.className = 'form-status is-success';
+        }).catch(function (err) {
+          siteSettingsStatus.textContent = err.message;
+          siteSettingsStatus.className = 'form-status is-error';
+        });
+      }
+
+      renderSiteLogoPreview();
+      renderSiteVideoPreview();
+
+      B.$('#site-logo-add').addEventListener('click', function () { siteLogoInput.click(); });
+      siteLogoInput.addEventListener('change', function () {
+        var file = siteLogoInput.files && siteLogoInput.files[0];
+        siteLogoInput.value = '';
+        if (!file) return;
+        editAndUpload(file).then(function (url) {
+          if (url) {
+            currentLogoUrl = url;
+            renderSiteLogoPreview();
+            return saveSiteSettings();
+          }
+        }).catch(function (err) { siteSettingsStatus.textContent = err.message; siteSettingsStatus.className = 'form-status is-error'; });
+      });
+
+      siteLogoPreview.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-edit-site-logo]')) return;
+        editAndUpload(currentLogoUrl).then(function (url) {
+          if (url) {
+            currentLogoUrl = url;
+            renderSiteLogoPreview();
+            return saveSiteSettings();
+          }
+        }).catch(function (err) { siteSettingsStatus.textContent = err.message; siteSettingsStatus.className = 'form-status is-error'; });
+      });
+
+      B.$('#site-video-add').addEventListener('click', function () { siteVideoInput.click(); });
+      siteVideoInput.addEventListener('change', function () {
+        var file = siteVideoInput.files && siteVideoInput.files[0];
+        siteVideoInput.value = '';
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('file', file);
+        siteSettingsStatus.textContent = 'Uploading…';
+        siteSettingsStatus.className = 'form-status';
+        B.api('/api/uploads/media', { method: 'POST', body: fd }).then(function (result) {
+          currentVideoUrl = result.url;
+          renderSiteVideoPreview();
+          return saveSiteSettings();
+        }).catch(function (err) { siteSettingsStatus.textContent = err.message; siteSettingsStatus.className = 'form-status is-error'; });
+      });
+
+      siteVideoPreview.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-remove-site-video]')) return;
+        currentVideoUrl = '';
+        renderSiteVideoPreview();
+        saveSiteSettings();
+      });
+
+      siteVideoProductSelect.addEventListener('change', saveSiteSettings);
+    }
   }
 
   /* Add category */

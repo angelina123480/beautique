@@ -19,6 +19,7 @@ const uploads = require('../lib/uploads');
 const rewards = require('../lib/rewards');
 const scents = require('../lib/scents');
 const skinGoals = require('../lib/skin-goals');
+const siteSettings = require('../lib/siteSettings');
 
 const SCENT_FAMILIES = new Set(scents.SCENT_FAMILIES.map((entry) => entry.id));
 const SKIN_GOALS = new Set(skinGoals.SKIN_GOALS.map((entry) => entry.id));
@@ -46,6 +47,33 @@ function uploadSingleImage(req, res, next) {
     if (!err) return next();
     if (err.code === 'LIMIT_FILE_SIZE') {
       err.message = 'Image is too large (max 4MB).';
+    }
+    err.status = err.status || 400;
+    next(err);
+  });
+}
+
+/* Same idea as `upload`, but also accepts short video clips for the
+   homepage hero banner — kept as a separate instance so the regular
+   product-photo uploader everywhere else can't accidentally take a video. */
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm))$/.test(file.mimetype)) {
+      return cb(null, true);
+    }
+    const err = new Error('Only JPG, PNG, WEBP, GIF images or MP4/WEBM video are allowed.');
+    err.status = 400;
+    cb(err);
+  }
+});
+
+function uploadSingleMedia(req, res, next) {
+  mediaUpload.single('file')(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      err.message = 'File is too large (max 4MB) — compress the video before uploading.';
     }
     err.status = err.status || 400;
     next(err);
@@ -462,6 +490,34 @@ router.post('/uploads', auth.requireAdmin, uploadSingleImage, ah(async (req, res
   }
   const url = await uploads.saveUpload(req.file.buffer, req.file.originalname, req.file.mimetype);
   res.json({ ok: true, url });
+}));
+
+/* Separate from the product-photo uploader above — this one also accepts
+   the homepage hero video (see lib/siteSettings.js and mediaUpload). */
+router.post('/uploads/media', auth.requireAdmin, uploadSingleMedia, ah(async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ ok: false, message: 'No file provided.' });
+  }
+  const url = await uploads.saveUpload(req.file.buffer, req.file.originalname, req.file.mimetype);
+  res.json({ ok: true, url });
+}));
+
+router.patch('/admin/site-settings', auth.requireAdmin, ah(async (req, res) => {
+  const payload = req.body || {};
+  const fields = {};
+
+  if (payload.logoUrl !== undefined) {
+    fields.logoUrl = (payload.logoUrl ? String(payload.logoUrl).trim() : '') || '/img/logo.png';
+  }
+  if (payload.heroVideoUrl !== undefined) {
+    fields.heroVideoUrl = (payload.heroVideoUrl ? String(payload.heroVideoUrl).trim() : '') || null;
+  }
+  if (payload.heroVideoProductId !== undefined) {
+    fields.heroVideoProductId = payload.heroVideoProductId ? Number(payload.heroVideoProductId) : null;
+  }
+
+  const settings = await siteSettings.updateSettings(fields);
+  res.json({ ok: true, settings });
 }));
 
 function applyProductFields(product, payload, validCategoryIds) {
