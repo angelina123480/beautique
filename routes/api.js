@@ -787,10 +787,13 @@ router.post('/rewards/redeem', auth.requireUser, ah(async (req, res) => {
   res.json({ ok: true, code, discount: tier.discount });
 }));
 
+/* Always the caller's own order history, regardless of role — this powers
+   the personal "Your orders" list on /profile, not the admin dashboard
+   (which fetches every order separately, server-side, in routes/index.js).
+   An admin's own history page should show their own orders, not the whole
+   site's, and must respect hidden_from_user the same as anyone else's. */
 router.get('/orders', auth.requireUser, ah(async (req, res) => {
-  const orderList = req.user.role === 'admin'
-    ? await orders.getAllOrders()
-    : await orders.getOrdersForUser(req.user.id);
+  const orderList = await orders.getOrdersForUser(req.user.id);
   res.json({ ok: true, orders: orderList });
 }));
 
