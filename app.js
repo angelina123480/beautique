@@ -74,11 +74,37 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
+/* Every third-party origin the app actually loads something from: Google
+   Fonts, the face-api.js library + its model weights (jsdelivr), and
+   Leaflet + OpenStreetMap for the optional delivery-address map. Kept in
+   one place so the shade matcher or address picker breaking silently
+   (from a missed origin) is easy to rule out. */
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  // Inline <script>/<style> are used throughout the EJS views (passing data
+  // to page scripts, one-off style="" attributes) — 'unsafe-inline' is a
+  // known trade-off, not an oversight; the real payoff of this policy is
+  // blocking script/resource loads from any origin outside this allowlist.
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.public.blob.vercel-storage.com",
+  "connect-src 'self' https://cdn.jsdelivr.net https://nominatim.openstreetmap.org"
+].join('; ');
+
 /* Basic security headers. */
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'SAMEORIGIN');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Content-Security-Policy', CSP);
+  if (req.secure) {
+    res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
   /* Every page/API response here reflects live account state (who's signed
      in, their cart, orders...) — never let the browser cache or restore one
      from bfcache after sign-out, or the back button can show a stale

@@ -796,4 +796,99 @@
       });
     });
   }
+
+  /* ---------------- Customer accounts ---------------- */
+
+  document.addEventListener('change', function (e) {
+    var roleSelect = e.target.closest('[data-account-role]');
+    if (!roleSelect) return;
+    var id = roleSelect.getAttribute('data-account-role');
+    var role = roleSelect.value;
+    var previous = role === 'admin' ? 'client' : 'admin';
+    roleSelect.disabled = true;
+    B.api('/api/admin/users/' + id, { method: 'PATCH', body: { role: role } }).then(function () {
+      B.toast(role === 'admin' ? 'Promoted to admin' : 'Moved to client');
+      roleSelect.disabled = false;
+    }).catch(function (err) {
+      roleSelect.value = previous;
+      roleSelect.disabled = false;
+      B.toast(err.message, 'error');
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    var deleteBtn = e.target.closest('[data-account-delete]');
+    if (!deleteBtn) return;
+    var id = deleteBtn.getAttribute('data-account-delete');
+    var row = deleteBtn.closest('tr');
+    var name = row ? row.querySelector('strong').textContent : 'this account';
+    B.confirmDialog('Delete ' + name + '\'s account?', 'This removes their login and profile. Past orders stay on record but are no longer tied to an account.')
+      .then(function (confirmed) {
+        if (!confirmed) return;
+        B.api('/api/admin/users/' + id, { method: 'DELETE' }).then(function () {
+          B.toast('Account deleted');
+          if (row) row.remove();
+        }).catch(function (err) {
+          B.toast(err.message, 'error');
+        });
+      });
+  });
+
+  /* ---------------- Store assistant ---------------- */
+
+  var assistantLog = B.$('#assistant-log');
+  if (assistantLog) {
+    var assistantInput = B.$('#assistant-input');
+    var assistantSend = B.$('#assistant-send');
+    var assistantStatus = B.$('#assistant-status');
+    var assistantHistory = [];
+
+    function addAssistantBubble(role, text) {
+      var bubble = document.createElement('div');
+      bubble.style.cssText = role === 'user'
+        ? 'align-self:flex-end; max-width:80%; background:var(--accent); color:#fff; padding:10px 14px; border-radius:14px 14px 2px 14px; font-size:14px; white-space:pre-wrap;'
+        : 'align-self:flex-start; max-width:80%; background:var(--surface, #f3eef0); padding:10px 14px; border-radius:14px 14px 14px 2px; font-size:14px; white-space:pre-wrap;';
+      bubble.textContent = text;
+      assistantLog.appendChild(bubble);
+      assistantLog.scrollTop = assistantLog.scrollHeight;
+      return bubble;
+    }
+
+    function askAssistant() {
+      var question = assistantInput.value.trim();
+      if (!question) return;
+
+      addAssistantBubble('user', question);
+      assistantInput.value = '';
+      assistantInput.disabled = true;
+      assistantSend.disabled = true;
+      assistantStatus.textContent = '';
+      assistantStatus.className = 'form-status';
+      var thinkingBubble = addAssistantBubble('assistant', 'Thinking…');
+
+      B.api('/api/admin/assistant', {
+        method: 'POST',
+        body: { message: question, history: assistantHistory }
+      }).then(function (result) {
+        thinkingBubble.textContent = result.answer;
+        assistantHistory.push({ role: 'user', text: question });
+        assistantHistory.push({ role: 'assistant', text: result.answer });
+        assistantInput.disabled = false;
+        assistantSend.disabled = false;
+        assistantInput.focus();
+      }).catch(function (err) {
+        thinkingBubble.remove();
+        assistantStatus.textContent = err.message;
+        assistantStatus.className = 'form-status is-error';
+        assistantInput.disabled = false;
+        assistantSend.disabled = false;
+        assistantInput.focus();
+      });
+    }
+
+    assistantSend.addEventListener('click', askAssistant);
+    assistantInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') askAssistant();
+    });
+  }
 })();

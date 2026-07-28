@@ -9,6 +9,8 @@ const users = require('../lib/users');
 const orders = require('../lib/orders');
 const emailService = require('../lib/emailService');
 const auth = require('../lib/auth');
+const payments = require('../lib/payments');
+const { commitOrder } = require('../lib/checkout');
 const scents = require('../lib/scents');
 const skinGoals = require('../lib/skin-goals');
 
@@ -311,7 +313,7 @@ router.get('/auth/google', (req, res) => {
   }
 
   const state = crypto.randomBytes(16).toString('hex');
-  res.cookie(GOOGLE_STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  res.cookie(GOOGLE_STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
@@ -380,7 +382,7 @@ router.get('/auth/google/callback', ah(async (req, res) => {
     googleId: profile.sub
   });
 
-  await auth.createSession(res, user.id);
+  await auth.createSession(req, res, user.id);
   res.redirect(user.role === 'admin' ? '/admin' : '/profile');
 }));
 
@@ -393,8 +395,70 @@ router.get('/profile', (req, res) => {
 
 router.get('/checkout', (req, res) => {
   const unusedCodes = req.user ? (req.user.discountCodes || []).filter((entry) => !entry.usedAt) : [];
-  res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes });
+  res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes, stripeOrder: null, stripeError: null });
 });
+
+/* Stripe redirects here after a card payment. The order is only ever
+   written to the database at this point (never at Checkout Session
+   creation) — stripe_session_id makes this idempotent, so a page refresh
+   or double-hit doesn't create a duplicate order or double-decrement
+   stock. */
+router.get('/checkout/success', ah(async (req, res) => {
+  const unusedCodes = req.user ? (req.user.discountCodes || []).filter((entry) => !entry.usedAt) : [];
+  const sessionId = String(req.query.session_id || '');
+  const fail = (message) => res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes, stripeOrder: null, stripeError: message });
+
+  if (!sessionId || !payments.isConfigured()) {
+    return fail('We couldn’t find that payment session.');
+  }
+
+  let session;
+  try {
+    session = await payments.retrieveSession(sessionId);
+  } catch (err) {
+    return fail('We couldn’t find that payment session.');
+  }
+
+  if (session.payment_status !== 'paid') {
+    return fail('That payment wasn’t completed, so no order was placed.');
+  }
+
+  const existing = await orders.getOrderByStripeSession(session.id);
+  if (existing) {
+    return res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes, stripeOrder: existing, stripeError: null });
+  }
+
+  const meta = session.metadata || {};
+  const user = await users.getUserById(Number(meta.userId));
+  if (!user) {
+    return fail('We couldn’t match that payment to an account.');
+  }
+
+  let orderItems;
+  try {
+    orderItems = JSON.parse(meta.items || '[]');
+  } catch (err) {
+    orderItems = [];
+  }
+  if (!orderItems.length) {
+    return fail('We couldn’t find what was in your bag for that payment.');
+  }
+
+  const subtotal = Math.round(orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0) * 100) / 100;
+  const order = await commitOrder({
+    user,
+    orderItems,
+    subtotal,
+    shipping: Number(meta.shipping) || 0,
+    discount: Number(meta.discount) || 0,
+    discountCode: meta.discountCode || null,
+    paymentMethod: 'online',
+    address: meta.address || user.address || '',
+    stripeSessionId: session.id
+  });
+
+  res.render('checkout', { page: 'Checkout', menuId: 'checkout', unusedCodes, stripeOrder: order, stripeError: null });
+}));
 
 router.get('/admin', ah(async (req, res) => {
   if (!req.user || req.user.role !== 'admin') {
@@ -432,6 +496,17 @@ router.get('/admin', ah(async (req, res) => {
     reviews: reviews.length
   };
 
+  const orderCountByUser = new Map();
+  orderList.forEach((order) => {
+    if (order.userId == null) return;
+    orderCountByUser.set(order.userId, (orderCountByUser.get(order.userId) || 0) + 1);
+  });
+  /* auth.safeUser strips password hashes / OTP codes before this ever
+     reaches the template — allUsers is otherwise raw DB rows. */
+  const accounts = allUsers
+    .map((account) => Object.assign({}, auth.safeUser(account), { orderCount: orderCountByUser.get(account.id) || 0 }))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
   res.render('admin', {
     page: 'Admin dashboard',
     menuId: 'admin',
@@ -440,6 +515,7 @@ router.get('/admin', ah(async (req, res) => {
     reviews,
     messages: messageList,
     categories: categoryList,
+    accounts,
     stats
   });
 }));

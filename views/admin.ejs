@@ -42,6 +42,8 @@
       <button type="button" data-tab="orders">Orders (<%= orders.length %>)</button>
       <button type="button" data-tab="reviews">Reviews (<%= reviews.length %>)</button>
       <button type="button" data-tab="messages">Messages (<%= messages.length %>)</button>
+      <button type="button" data-tab="customers">Customers (<%= accounts.length %>)</button>
+      <button type="button" data-tab="assistant">Assistant</button>
       <button type="button" data-tab="site">Site &amp; branding</button>
     </div>
 
@@ -263,6 +265,68 @@
             </div>
           <% }); %>
         <% } %>
+      </div>
+    </div>
+
+    <!-- Customers -->
+    <div class="tab-panel" id="tab-customers">
+      <div class="card">
+        <h3 style="font-size: 22px; margin-bottom: 4px;">Customer accounts</h3>
+        <p class="text-muted" style="font-size:13.5px; margin-bottom:16px;">Promote a trusted customer to admin, or remove an account. Deleting an account keeps its past orders on record, just no longer tied to a login.</p>
+        <% if (!accounts.length) { %>
+          <div class="empty-state" style="padding: 40px 10px;">
+            <span class="empty-emoji"><%- icon('user') %></span>
+            <h3>No accounts yet</h3>
+          </div>
+        <% } else { %>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Orders</th>
+                  <th>Joined</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% accounts.forEach(function(account) { %>
+                  <tr data-account-row="<%= account.id %>">
+                    <td><strong><%= account.name %></strong></td>
+                    <td><%= account.email %></td>
+                    <td>
+                      <select class="select-pill" data-account-role="<%= account.id %>" <%= account.id === user.id ? 'disabled title="You can\'t change your own role here"' : '' %>>
+                        <option value="client" <%= account.role === 'client' ? 'selected' : '' %>>Client</option>
+                        <option value="admin" <%= account.role === 'admin' ? 'selected' : '' %>>Admin</option>
+                      </select>
+                    </td>
+                    <td><%= account.orderCount %></td>
+                    <td><%= dateLabel(account.createdAt) %></td>
+                    <td>
+                      <button type="button" class="btn btn-ghost btn-sm" data-account-delete="<%= account.id %>" <%= account.id === user.id ? 'disabled title="You can\'t delete your own account here"' : '' %>>Delete</button>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Store assistant -->
+    <div class="tab-panel" id="tab-assistant">
+      <div class="card">
+        <h3 style="font-size: 22px; margin-bottom: 4px;">Store assistant</h3>
+        <p class="text-muted" style="font-size:13.5px; margin-bottom:16px;">Ask about sales, top products, or customers — answers are generated live from your store's own data, not a canned script.</p>
+        <div id="assistant-log" style="display:flex; flex-direction:column; gap:12px; max-height:420px; overflow-y:auto; margin-bottom:16px; padding-right:4px;"></div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="assistant-input" class="input" placeholder="e.g. What's our best-selling product?" style="flex:1;">
+          <button type="button" class="btn btn-primary btn-sm" id="assistant-send">Ask</button>
+        </div>
+        <div class="form-status" id="assistant-status"></div>
       </div>
     </div>
 

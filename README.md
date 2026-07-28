@@ -22,10 +22,17 @@ A modern beauty e-commerce demo built with **Node.js, Express 4, and EJS** — n
 - Inline inventory editing, add / edit / delete products, with photo uploads (gallery + model photo)
 - Order management: mark shipped / delivered, cancel with restock
 - Customer reviews and contact-form messages
+- Account management: promote/demote client ↔ admin, delete accounts (order history is preserved, just detached)
+- Store assistant: ask analytics questions in plain English ("what's our best seller?", "what's running low on stock?") — answered by Claude using live data, not canned responses
 
 **Email** (via free Gmail SMTP + [Nodemailer](https://nodemailer.com), optional)
 - OTP codes, order confirmations, status updates, cancellations, review + contact notifications
 - Without `SMTP_USER` / `SMTP_PASS` set, the app runs in **dev mail mode**: emails are logged, and OTP codes appear directly in the UI so the demo always works
+
+**Payments** (via [Stripe Checkout](https://stripe.com/payments/checkout), optional)
+- "Pay online" redirects to a Stripe-hosted Checkout page; the order is only created after Stripe confirms the charge (`/checkout/success`)
+- Without `STRIPE_SECRET_KEY` set, "Pay online" is disabled — checkout falls back to "Pay on delivery"
+- A `sk_test_...` key gives a fully working demo with no real money moving (test card `4242 4242 4242 4242`, any future expiry/CVC)
 
 ## Quick start
 
@@ -49,6 +56,8 @@ Copy `.env.example` to `.env` (all values optional):
 | `SMTP_USER` | Gmail address used to send mail (with an App Password) — enables real email delivery |
 | `SMTP_PASS` | 16-character Gmail App Password for `SMTP_USER` |
 | `EMAIL_FROM` | From address for outgoing mail |
+| `STRIPE_SECRET_KEY` | Stripe secret key — enables "Pay online" via Stripe Checkout (use a `sk_test_...` key for a free working demo) |
+| `ANTHROPIC_API_KEY` | Enables the admin dashboard's "Store assistant" (Claude-powered analytics Q&A) |
 | `ADMIN_INVITE_CODE` | Code required to sign up as admin (default `BEAUTIQUE-ADMIN`) |
 | `PORT` | Server port (default `3000`) |
 
@@ -65,6 +74,10 @@ lib/db.js             Shared Postgres connection (Neon serverless driver)
 lib/users.js          User accounts, discount codes
 lib/products.js       Products, shades, reviews
 lib/orders.js         Orders, order items
+lib/checkout.js       Cart validation, order commit (shared by cash-on-delivery and Stripe)
+lib/payments.js       Stripe Checkout session creation/retrieval
+lib/analytics.js      Sales/product aggregation queries for the store assistant
+lib/assistant.js      Claude tool-use loop powering the admin "Store assistant"
 lib/categories.js     Shop categories
 lib/sessions.js       Login sessions
 lib/messages.js       Contact-form messages

@@ -15,6 +15,9 @@ const users = require('../lib/users');
 const products = require('../lib/products');
 const orders = require('../lib/orders');
 const emailService = require('../lib/emailService');
+const payments = require('../lib/payments');
+const { validateCartItems, priceDiscount, commitOrder } = require('../lib/checkout');
+const assistant = require('../lib/assistant');
 const uploads = require('../lib/uploads');
 const rewards = require('../lib/rewards');
 const scents = require('../lib/scents');
@@ -131,6 +134,15 @@ function generateOtp() {
  * provider is configured (local demo), the code is returned so the UI can
  * display it instead of leaving the user stranded.
  */
+/* Only ever hand the raw code back in the response when we're NOT in
+   production, regardless of whether email happens to be configured — so
+   if SMTP silently breaks in production (expired app password, quota,
+   etc.) the failure mode is "no code arrives", never "the code leaks
+   into the API response for anyone hitting this endpoint". */
+function devOtpFor(otp) {
+  return (!emailService.isConfigured() && process.env.NODE_ENV !== 'production') ? otp : undefined;
+}
+
 async function issueOtp(user) {
   const otp = generateOtp();
   await users.updateUser(user.id, { otp, otpExpires: new Date(Date.now() + OTP_TTL_MS).toISOString() });
@@ -138,7 +150,7 @@ async function issueOtp(user) {
      frozen the instant the response goes out, killing any still-pending
      background work before it actually reaches the SMTP server. */
   await emailService.sendEmail('otp', user.email, { firstName: user.name, otp }).catch(() => {});
-  return emailService.isConfigured() ? undefined : otp;
+  return devOtpFor(otp);
 }
 
 /** Same idea as issueOtp, but for the separate "forgot password" reset code. */
@@ -146,7 +158,7 @@ async function issueResetOtp(user) {
   const otp = generateOtp();
   await users.updateUser(user.id, { resetOtp: otp, resetOtpExpires: new Date(Date.now() + OTP_TTL_MS).toISOString() });
   await emailService.sendEmail('password_reset', user.email, { firstName: user.name, otp }).catch(() => {});
-  return emailService.isConfigured() ? undefined : otp;
+  return devOtpFor(otp);
 }
 
 /* ------------------------------------------------------------------ *
@@ -163,6 +175,14 @@ router.post('/auth/signup', ah(async (req, res) => {
   const password = String(payload.password || '');
   const name = String(payload.name || '').trim();
 
+  /* Keyed by IP, not email — an attacker brute-forcing the admin invite
+     code below would just rotate the email on every attempt, so an
+     email-keyed limit wouldn't slow that down at all. */
+  const signupIpKey = 'signup:ip:' + req.ip;
+  if (await rateLimit.isLimited(signupIpKey, { max: 8 })) {
+    return res.status(429).json({ ok: false, message: 'Too many signup attempts. Please wait a few minutes and try again.' });
+  }
+
   if (!isValidEmail(email)) {
     return res.status(400).json({ ok: false, message: 'Please enter a valid email address.' });
   }
@@ -172,6 +192,7 @@ router.post('/auth/signup', ah(async (req, res) => {
 
   let role = payload.role === 'admin' ? 'admin' : 'client';
   if (role === 'admin' && String(payload.inviteCode || '') !== adminInviteCode()) {
+    await rateLimit.recordAttempt(signupIpKey);
     return res.status(403).json({ ok: false, message: 'Invalid admin invite code.' });
   }
 
@@ -228,7 +249,7 @@ router.post('/auth/signin', ah(async (req, res) => {
     return res.json({ ok: true, requiresOtp: true, email: user.email, devOtp });
   }
 
-  await auth.createSession(res, user.id);
+  await auth.createSession(req, res, user.id);
   res.json({ ok: true, user: auth.safeUser(user) });
 }));
 
@@ -257,7 +278,7 @@ router.post('/auth/verify-otp', ah(async (req, res) => {
 
   await users.updateUser(user.id, { otpVerified: true, otp: '', otpExpires: null });
 
-  await auth.createSession(res, user.id);
+  await auth.createSession(req, res, user.id);
   res.json({ ok: true, user: auth.safeUser(user) });
 }));
 
@@ -595,6 +616,84 @@ router.post('/admin/sync-catalog', auth.requireAdmin, ah(async (req, res) => {
   res.json({ ok: true, productsCount: productData.length, categoriesCount: categoryData.length });
 }));
 
+/* ------------------------------------------------------------------ *
+ * Admin: account management
+ * ------------------------------------------------------------------ */
+
+router.get('/admin/users', auth.requireAdmin, ah(async (req, res) => {
+  const allUsers = await users.getAllUsers();
+  res.json({ ok: true, users: allUsers.map((entry) => auth.safeUser(entry)).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)) });
+}));
+
+router.patch('/admin/users/:id', auth.requireAdmin, ah(async (req, res) => {
+  const id = Number(req.params.id);
+  const role = req.body && req.body.role === 'admin' ? 'admin' : 'client';
+
+  if (id === req.user.id) {
+    return res.status(400).json({ ok: false, message: 'You can\'t change your own role here.' });
+  }
+
+  const target = await users.getUserById(id);
+  if (!target) {
+    return res.status(404).json({ ok: false, message: 'Account not found.' });
+  }
+  /* Without this, an admin could demote every admin account (including
+     their own, from another tab/session) and lock everyone out of /admin
+     with no way back in short of a direct database edit. */
+  if (target.role === 'admin' && role === 'client' && (await users.countAdmins()) <= 1) {
+    return res.status(400).json({ ok: false, message: 'This is the last admin account — make another account admin before removing this one\'s access.' });
+  }
+
+  const updated = await users.updateUser(id, { role });
+  res.json({ ok: true, user: auth.safeUser(updated) });
+}));
+
+router.delete('/admin/users/:id', auth.requireAdmin, ah(async (req, res) => {
+  const id = Number(req.params.id);
+  if (id === req.user.id) {
+    return res.status(400).json({ ok: false, message: 'You can\'t delete your own account here — use your profile page instead.' });
+  }
+
+  const target = await users.getUserById(id);
+  if (!target) {
+    return res.status(404).json({ ok: false, message: 'Account not found.' });
+  }
+  if (target.role === 'admin' && (await users.countAdmins()) <= 1) {
+    return res.status(400).json({ ok: false, message: 'You can\'t delete the last admin account.' });
+  }
+
+  await users.deleteUser(id);
+  res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------------ *
+ * Admin: store assistant
+ * ------------------------------------------------------------------ */
+
+router.post('/admin/assistant', auth.requireAdmin, ah(async (req, res) => {
+  if (!assistant.isConfigured()) {
+    return res.status(400).json({ ok: false, message: 'The store assistant isn\'t set up yet — add an ANTHROPIC_API_KEY to enable it.' });
+  }
+
+  const message = String((req.body || {}).message || '').trim();
+  if (!message) {
+    return res.status(400).json({ ok: false, message: 'Ask a question first.' });
+  }
+
+  /* Cost/abuse guard, not a security boundary (already admin-only) — caps
+     how many Claude calls one admin can trigger in a burst, e.g. from a
+     stuck client-side retry loop. */
+  const key = 'assistant:user:' + req.user.id;
+  if (await rateLimit.isLimited(key, { max: 30 })) {
+    return res.status(429).json({ ok: false, message: 'Too many questions in a short time — please wait a few minutes.' });
+  }
+  await rateLimit.recordAttempt(key);
+
+  const history = Array.isArray((req.body || {}).history) ? req.body.history.slice(-20) : [];
+  const answer = await assistant.ask(message, history);
+  res.json({ ok: true, answer });
+}));
+
 router.post('/products', auth.requireAdmin, ah(async (req, res) => {
   const payload = req.body || {};
   if (!payload.name || !payload.brand || payload.price === undefined || !payload.description) {
@@ -812,136 +911,49 @@ router.post('/orders', auth.requireUser, ah(async (req, res) => {
     return res.status(400).json({ ok: false, message: 'Sorry, we currently only deliver within Lebanon — please include "Lebanon" in your delivery address.' });
   }
 
-  const orderItems = [];
-  let subtotal = 0;
-
-  /* Validate every item before committing any stock changes — otherwise a
-     later item failing validation would leave earlier items' stock already
-     decremented with no order actually created. */
-  for (const item of items) {
-    const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
-    const product = await products.getProductById(Number(item.id));
-    const shade = String(item.shade || '').trim();
-
-    if (!product) {
-      return res.status(400).json({ ok: false, message: 'One of the items is no longer available.' });
-    }
-    /* Without this, an item added via a shortcut that skips the shade
-       picker (shop-grid "Add to bag", wishlist quick-add) would check out
-       with no shade specified, leaving fulfillment with no way to know
-       which one to send. */
-    if (Array.isArray(product.shades) && product.shades.length && !shade) {
-      return res.status(400).json({ ok: false, message: 'Please choose a shade for ' + product.name + ' before checking out.' });
-    }
-
-    /* For a shaded product, availability is the specific shade's own stock
-       (product.stock/soldOut are just the sum across all shades — a shade
-       with 0 left shouldn't be buyable just because a different shade of
-       the same product still has stock). */
-    let availableStock = product.stock;
-    let itemSoldOut = product.soldOut;
-    if (shade) {
-      const shadeEntry = (product.shades || []).find((entry) => entry.name === shade);
-      if (!shadeEntry) {
-        return res.status(400).json({ ok: false, message: 'That shade of ' + product.name + ' is no longer available.' });
-      }
-      availableStock = shadeEntry.stock;
-      itemSoldOut = shadeEntry.soldOut;
-    }
-
-    if (itemSoldOut || availableStock < quantity) {
-      const label = product.name + (shade ? ' (' + shade + ')' : '');
-      return res.status(400).json({
-        ok: false,
-        message: availableStock > 0
-          ? 'Only ' + availableStock + ' of ' + label + ' left in stock.'
-          : label + ' is sold out.'
-      });
-    }
-
-    const unitPrice = (typeof product.salePrice === 'number' && product.salePrice > 0 && product.salePrice < product.price)
-      ? product.salePrice
-      : product.price;
-    subtotal += unitPrice * quantity;
-    orderItems.push({ productId: product.id, name: product.name, quantity, price: unitPrice, shade });
+  let orderItems, subtotal;
+  try {
+    ({ orderItems, subtotal } = await validateCartItems(items));
+  } catch (err) {
+    return res.status(err.status || 400).json({ ok: false, message: err.message });
   }
 
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
-
-  let discount = 0;
-  let usedDiscountCode = null;
-  const requestedCode = payload.discountCode ? String(payload.discountCode).trim().toUpperCase() : '';
-  if (requestedCode) {
-    const codeEntry = (req.user.discountCodes || []).find((entry) => entry.code === requestedCode && !entry.usedAt);
-    if (codeEntry) {
-      discount = Math.round(subtotal * (codeEntry.discount / 100) * 100) / 100;
-      usedDiscountCode = codeEntry.code;
-    }
-  }
-
-  const total = Math.round((subtotal - discount + shipping) * 100) / 100;
-  const pointsEarned = Math.max(0, Math.floor(subtotal - discount));
+  const { discount, usedDiscountCode } = priceDiscount(req.user, subtotal, payload.discountCode);
   const paymentMethod = payload.paymentMethod === 'delivery' ? 'delivery' : 'online';
 
-  const order = {
-    id: Date.now(),
-    userId: req.user.id,
-    userEmail: req.user.email,
-    status: 'confirmed',
-    items: orderItems,
-    subtotal: Math.round(subtotal * 100) / 100,
-    discount,
-    discountCode: usedDiscountCode,
-    shipping,
-    total,
-    pointsEarned,
-    paymentMethod,
-    address,
-    createdAt: new Date().toISOString()
-  };
-
-  /* Everything below must commit together — otherwise a crash partway
-     through could decrement stock or award points without the order that
-     justified it (or vice versa). */
-  const txQueries = [
-    ...orders.createOrderQueries(order),
-    ...orderItems.map((item) => item.shade
-      ? products.adjustShadeStockQuery(item.productId, item.shade, -item.quantity)
-      : products.adjustStockQuery(item.productId, -item.quantity))
-  ];
-
-  const userRecord = req.user;
-  if (userRecord) {
-    /* Lifetime total never decreases (even when points are later spent on a
-       reward), so a redeemed tier can't retroactively re-lock a higher tier
-       the customer already qualified for. Seed it from the current balance
-       the first time this field is written for an older account. */
-    const priorLifetime = Number(userRecord.lifetimePoints) || Number(userRecord.rewardPoints) || 0;
-    /* Whatever address they just delivered to becomes their saved address,
-       so checkout stays pre-filled with wherever they actually asked us to
-       ship last time, not just whatever they set once in their profile. */
-    txQueries.push(users.updateUserQuery(userRecord.id, {
-      rewardPoints: (Number(userRecord.rewardPoints) || 0) + pointsEarned,
-      lifetimePoints: priorLifetime + pointsEarned,
-      address
-    }));
-    if (usedDiscountCode) {
-      txQueries.push(users.setDiscountCodeUsedQuery(userRecord.id, usedDiscountCode, new Date().toISOString()));
+  /* Card payments don't commit an order here — Stripe hasn't been paid yet.
+     We only validate + price the cart, hand it to Stripe as a Checkout
+     Session, and let /checkout/success commit the order once Stripe
+     confirms the charge actually went through. */
+  if (paymentMethod === 'online') {
+    if (!payments.isConfigured()) {
+      return res.status(400).json({ ok: false, message: 'Card payment isn’t set up yet — choose "Pay on delivery" instead.' });
     }
+    const origin = req.protocol + '://' + req.get('host');
+    const session = await payments.createCheckoutSession({
+      orderItems,
+      shipping,
+      discount,
+      discountCode: usedDiscountCode,
+      successUrl: origin + '/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: origin + '/checkout',
+      userId: req.user.id,
+      address
+    });
+    return res.json({ ok: true, redirectUrl: session.url });
   }
 
-  await db.sql.transaction(txQueries.filter(Boolean));
-
-  const itemsSummary = orderItems
-    .map((item) => '  • ' + item.quantity + ' × ' + item.name + (item.shade ? ' (' + item.shade + ')' : '') + ' ($' + item.price.toFixed(2) + ')')
-    .join('\n');
-  await emailService.sendEmail('order_confirmation', req.user.email, {
-    firstName: req.user.name,
-    orderNumber: order.id,
-    total: total.toFixed(2),
-    itemsSummary
-  }).catch(console.error);
-  await emailService.sendEmail('follow_up', req.user.email, { firstName: req.user.name }).catch(console.error);
+  const order = await commitOrder({
+    user: req.user,
+    orderItems,
+    subtotal,
+    shipping,
+    discount,
+    discountCode: usedDiscountCode,
+    paymentMethod,
+    address
+  });
 
   res.json({ ok: true, order });
 }));
