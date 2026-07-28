@@ -107,7 +107,8 @@ CREATE TABLE orders (
   hidden_from_user BOOLEAN NOT NULL DEFAULT FALSE,
   cancelled_at     TIMESTAMPTZ,
   updated_at       TIMESTAMPTZ,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  stripe_session_id TEXT UNIQUE  -- set for card orders; lets the success-page redirect be idempotent
 );
 CREATE INDEX idx_orders_user ON orders(user_id);
 

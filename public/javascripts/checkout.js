@@ -140,6 +140,14 @@
         discountCode: appliedCode ? appliedCode.code : null
       }
     }).then(function (result) {
+      /* Card payments don't return a placed order — the server hands back a
+         Stripe Checkout URL and the order is only actually created once
+         /checkout/success confirms the payment went through. */
+      if (result.redirectUrl) {
+        window.location.href = result.redirectUrl;
+        return;
+      }
+
       B.cart.clear();
       var order = result.order;
       B.$('#checkout-layout').innerHTML = '' +
