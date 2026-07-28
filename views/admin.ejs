@@ -255,13 +255,28 @@
           </div>
         <% } else { %>
           <% messages.forEach(function(message) { %>
-            <div class="review-item">
+            <div class="review-item" data-message-row="<%= message.id %>">
               <div class="review-item-head">
                 <strong><%= message.name %></strong>
                 <a href="mailto:<%= message.email %>" style="font-size: 13px;"><%= message.email %></a>
                 <span class="review-date"><%= dateTimeLabel(message.createdAt) %></span>
               </div>
               <p><%= message.message %></p>
+              <div class="notice" data-message-replied style="margin-top:10px; font-size:13px; <%= message.repliedAt ? '' : 'display:none;' %>">
+                <strong>Replied</strong> <span data-replied-when><%= message.repliedAt ? dateTimeLabel(message.repliedAt) : '' %></span> — <span data-replied-text><%= message.reply || '' %></span>
+              </div>
+              <div style="display:flex; gap:8px; margin-top:10px;">
+                <button type="button" class="btn btn-soft btn-sm" data-message-reply-toggle="<%= message.id %>"><%= message.repliedAt ? 'Reply again' : 'Reply' %></button>
+                <button type="button" class="btn btn-ghost btn-sm" data-message-delete="<%= message.id %>">Delete</button>
+              </div>
+              <div class="reply-form" data-reply-form style="display:none; margin-top:10px;">
+                <textarea class="input" rows="3" placeholder="Write your reply — it's sent as an email to <%= message.email %>" data-reply-textarea></textarea>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <button type="button" class="btn btn-primary btn-sm" data-message-reply-send="<%= message.id %>">Send reply</button>
+                  <button type="button" class="btn btn-ghost btn-sm" data-message-reply-cancel>Cancel</button>
+                </div>
+                <div class="form-status" data-reply-status></div>
+              </div>
             </div>
           <% }); %>
         <% } %>
@@ -343,7 +358,11 @@
       <div class="card" style="margin-top:24px;">
         <h3 style="font-size: 22px; margin-bottom: 4px;">Homepage hero video</h3>
         <p class="text-muted" style="font-size:13.5px; margin-bottom:16px;">Replaces the homepage's product-photo collage with a looping video. Short clips only — under 4MB, muted, no sound needed.</p>
-        <div class="image-manager" id="site-video-preview" data-current="<%= siteSettings.heroVideoUrl || '' %>"></div>
+        <div class="image-manager" id="site-video-preview"
+             data-current="<%= siteSettings.heroVideoUrl || '' %>"
+             data-position-x="<%= siteSettings.heroVideoPositionX %>"
+             data-position-y="<%= siteSettings.heroVideoPositionY %>"
+             data-zoom="<%= siteSettings.heroVideoZoom %>"></div>
         <button type="button" class="btn btn-ghost btn-sm" id="site-video-add">Upload video</button>
         <input type="file" id="site-video-input" accept="video/mp4,video/webm" style="display:none;">
         <div class="field" style="margin-top:18px; max-width:320px;">
@@ -491,6 +510,42 @@
         <button class="btn btn-primary btn-sm" id="image-editor-save" type="button">Save photo</button>
       </div>
       <div class="form-status" id="image-editor-status"></div>
+    </div>
+  </div>
+
+  <!-- Hero video position/zoom editor — a CSS object-position + scale crop,
+       not a re-encode (there's no video-processing library here, unlike
+       Cropper.js for photos). Lets the admin frame a moving subject inside
+       the fixed 4:5 banner instead of being stuck with the raw upload. -->
+  <div class="modal-backdrop" id="video-position-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Edit video position</h3>
+        <button class="modal-close" data-close-modal type="button" aria-label="Close"><%- icon('close') %></button>
+      </div>
+      <div class="hero-video-tile" style="max-width:280px; margin:0 auto;">
+        <video id="video-position-preview" muted loop autoplay playsinline></video>
+      </div>
+      <div class="image-editor-controls" style="flex-direction:column; align-items:stretch; gap:14px; margin-top:18px;">
+        <label class="image-editor-zoom">
+          Zoom
+          <input type="range" id="video-position-zoom" min="1" max="2" step="0.05" value="1">
+        </label>
+        <label class="image-editor-zoom">
+          Horizontal position
+          <input type="range" id="video-position-x" min="0" max="100" step="1" value="50">
+        </label>
+        <label class="image-editor-zoom">
+          Vertical position
+          <input type="range" id="video-position-y" min="0" max="100" step="1" value="50">
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" id="video-position-reset" type="button">Reset</button>
+        <button class="btn btn-ghost btn-sm" data-close-modal type="button">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="video-position-save" type="button">Save</button>
+      </div>
+      <div class="form-status" id="video-position-status"></div>
     </div>
   </div>
 

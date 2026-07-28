@@ -136,7 +136,24 @@ CREATE TABLE messages (
   name       TEXT NOT NULL,
   email      TEXT NOT NULL,
   message    TEXT NOT NULL,
+  reply      TEXT,
+  replied_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Site-wide settings the admin can change without a redeploy: logo, homepage
+-- hero video, and the video's crop (a CSS object-position + scale, not a
+-- re-encode). A single-row table (enforced by id = 1), not a generic
+-- key/value store — there are only ever these few site-wide values.
+CREATE TABLE site_settings (
+  id                     INTEGER PRIMARY KEY DEFAULT 1,
+  logo_url               TEXT NOT NULL DEFAULT '/img/logo.png',
+  hero_video_url         TEXT,
+  hero_video_product_id  BIGINT REFERENCES products(id) ON DELETE SET NULL,
+  hero_video_position_x  INTEGER NOT NULL DEFAULT 50,
+  hero_video_position_y  INTEGER NOT NULL DEFAULT 50,
+  hero_video_zoom        NUMERIC(3,2) NOT NULL DEFAULT 1,
+  CONSTRAINT site_settings_singleton CHECK (id = 1)
 );
 
 CREATE TABLE email_log (

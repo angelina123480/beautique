@@ -655,14 +655,19 @@
 
     /* Site & branding — logo and homepage hero video. Reuses editAndUpload
        (crop editor) for the logo since it's just another photo; the video
-       has no crop step, just a direct upload through the media endpoint. */
+       has no equivalent crop tool (no video-processing library in this
+       stack), so its "edit" is a CSS object-position + scale crop instead —
+       see the video-position-modal wiring below. */
     var siteLogoPreview = B.$('#site-logo-preview');
     if (siteLogoPreview) {
       var currentLogoUrl = siteLogoPreview.getAttribute('data-current') || '';
-      var currentVideoUrl = B.$('#site-video-preview').getAttribute('data-current') || '';
+      var siteVideoPreview = B.$('#site-video-preview');
+      var currentVideoUrl = siteVideoPreview.getAttribute('data-current') || '';
+      var currentVideoPositionX = Number(siteVideoPreview.getAttribute('data-position-x')) || 50;
+      var currentVideoPositionY = Number(siteVideoPreview.getAttribute('data-position-y')) || 50;
+      var currentVideoZoom = Number(siteVideoPreview.getAttribute('data-zoom')) || 1;
       var siteLogoInput = B.$('#site-logo-input');
       var siteVideoInput = B.$('#site-video-input');
-      var siteVideoPreview = B.$('#site-video-preview');
       var siteVideoProductSelect = B.$('#site-video-product');
       var siteSettingsStatus = B.$('#site-settings-status');
 
@@ -675,7 +680,9 @@
 
       function renderSiteVideoPreview() {
         siteVideoPreview.innerHTML = currentVideoUrl
-          ? '<div class="image-thumb"><video src="' + B.escapeHtml(currentVideoUrl) + '" style="width:100%; height:100%; object-fit:cover;" muted></video>' +
+          ? '<div class="image-thumb"><video src="' + B.escapeHtml(currentVideoUrl) + '" muted ' +
+            'style="width:100%; height:100%; object-fit:cover; object-position:' + currentVideoPositionX + '% ' + currentVideoPositionY + '%; transform:scale(' + currentVideoZoom + ');"></video>' +
+            '<button type="button" class="image-thumb-edit" data-edit-site-video>Edit position</button>' +
             '<button type="button" class="image-thumb-remove" data-remove-site-video aria-label="Remove video">' + window.BeautiqueIcons.close + '</button></div>'
           : '';
       }
@@ -686,7 +693,10 @@
           body: {
             logoUrl: currentLogoUrl,
             heroVideoUrl: currentVideoUrl,
-            heroVideoProductId: siteVideoProductSelect.value ? Number(siteVideoProductSelect.value) : null
+            heroVideoProductId: siteVideoProductSelect.value ? Number(siteVideoProductSelect.value) : null,
+            heroVideoPositionX: currentVideoPositionX,
+            heroVideoPositionY: currentVideoPositionY,
+            heroVideoZoom: currentVideoZoom
           }
         }).then(function () {
           siteSettingsStatus.textContent = 'Saved.';
@@ -736,12 +746,19 @@
         siteSettingsStatus.className = 'form-status';
         B.api('/api/uploads/media', { method: 'POST', body: fd }).then(function (result) {
           currentVideoUrl = result.url;
+          currentVideoPositionX = 50;
+          currentVideoPositionY = 50;
+          currentVideoZoom = 1;
           renderSiteVideoPreview();
           return saveSiteSettings();
         }).catch(function (err) { siteSettingsStatus.textContent = err.message; siteSettingsStatus.className = 'form-status is-error'; });
       });
 
       siteVideoPreview.addEventListener('click', function (e) {
+        if (e.target.closest('[data-edit-site-video]')) {
+          openVideoPositionEditor();
+          return;
+        }
         if (!e.target.closest('[data-remove-site-video]')) return;
         currentVideoUrl = '';
         renderSiteVideoPreview();
@@ -749,6 +766,54 @@
       });
 
       siteVideoProductSelect.addEventListener('change', saveSiteSettings);
+
+      /* Video position/zoom editor — a CSS object-position + scale crop
+         (see the modal-comment above its markup for why not a real crop). */
+      var videoPositionModal = B.$('#video-position-modal');
+      var videoPositionPreview = B.$('#video-position-preview');
+      var videoPositionZoomInput = B.$('#video-position-zoom');
+      var videoPositionXInput = B.$('#video-position-x');
+      var videoPositionYInput = B.$('#video-position-y');
+      var videoPositionStatus = B.$('#video-position-status');
+
+      function applyVideoPositionPreview() {
+        videoPositionPreview.style.objectPosition = videoPositionXInput.value + '% ' + videoPositionYInput.value + '%';
+        videoPositionPreview.style.transform = 'scale(' + videoPositionZoomInput.value + ')';
+      }
+      [videoPositionZoomInput, videoPositionXInput, videoPositionYInput].forEach(function (input) {
+        input.addEventListener('input', applyVideoPositionPreview);
+      });
+
+      function openVideoPositionEditor() {
+        if (!currentVideoUrl) return;
+        videoPositionPreview.src = currentVideoUrl;
+        videoPositionZoomInput.value = currentVideoZoom;
+        videoPositionXInput.value = currentVideoPositionX;
+        videoPositionYInput.value = currentVideoPositionY;
+        applyVideoPositionPreview();
+        videoPositionStatus.textContent = '';
+        videoPositionStatus.className = 'form-status';
+        B.openModal(videoPositionModal);
+      }
+
+      B.$('#video-position-reset').addEventListener('click', function () {
+        videoPositionZoomInput.value = 1;
+        videoPositionXInput.value = 50;
+        videoPositionYInput.value = 50;
+        applyVideoPositionPreview();
+      });
+
+      B.$('#video-position-save').addEventListener('click', function () {
+        currentVideoZoom = Number(videoPositionZoomInput.value);
+        currentVideoPositionX = Number(videoPositionXInput.value);
+        currentVideoPositionY = Number(videoPositionYInput.value);
+        renderSiteVideoPreview();
+        videoPositionStatus.textContent = 'Saving…';
+        videoPositionStatus.className = 'form-status';
+        saveSiteSettings().then(function () {
+          B.closeModal(videoPositionModal);
+        });
+      });
     }
   }
 
@@ -796,6 +861,81 @@
       });
     });
   }
+
+  /* ---------------- Contact messages ---------------- */
+
+  document.addEventListener('click', function (e) {
+    var replyToggle = e.target.closest('[data-message-reply-toggle]');
+    if (replyToggle) {
+      var row = replyToggle.closest('[data-message-row]');
+      var form = row.querySelector('[data-reply-form]');
+      var isOpen = form.style.display !== 'none';
+      form.style.display = isOpen ? 'none' : '';
+      if (!isOpen) form.querySelector('[data-reply-textarea]').focus();
+      return;
+    }
+
+    var replyCancel = e.target.closest('[data-message-reply-cancel]');
+    if (replyCancel) {
+      var cancelForm = replyCancel.closest('[data-reply-form]');
+      cancelForm.style.display = 'none';
+      cancelForm.querySelector('[data-reply-textarea]').value = '';
+      return;
+    }
+
+    var replySend = e.target.closest('[data-message-reply-send]');
+    if (replySend) {
+      var id = replySend.getAttribute('data-message-reply-send');
+      var sendRow = replySend.closest('[data-message-row]');
+      var sendForm = sendRow.querySelector('[data-reply-form]');
+      var textarea = sendForm.querySelector('[data-reply-textarea]');
+      var status = sendForm.querySelector('[data-reply-status]');
+      var reply = textarea.value.trim();
+      if (!reply) {
+        status.textContent = 'Write a reply first.';
+        status.className = 'form-status is-error';
+        return;
+      }
+      replySend.disabled = true;
+      status.textContent = 'Sending…';
+      status.className = 'form-status';
+      B.api('/api/messages/' + id + '/reply', { method: 'POST', body: { reply: reply } }).then(function (result) {
+        var repliedBox = sendRow.querySelector('[data-message-replied]');
+        repliedBox.style.display = '';
+        repliedBox.querySelector('[data-replied-when]').textContent = new Date(result.message.repliedAt).toLocaleString('en-US', {
+          year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+        });
+        repliedBox.querySelector('[data-replied-text]').textContent = result.message.reply;
+        sendRow.querySelector('[data-message-reply-toggle]').textContent = 'Reply again';
+        sendForm.style.display = 'none';
+        textarea.value = '';
+        status.textContent = '';
+        status.className = 'form-status';
+        replySend.disabled = false;
+        B.toast('Reply sent');
+      }).catch(function (err) {
+        status.textContent = err.message;
+        status.className = 'form-status is-error';
+        replySend.disabled = false;
+      });
+      return;
+    }
+
+    var deleteBtn = e.target.closest('[data-message-delete]');
+    if (deleteBtn) {
+      var messageId = deleteBtn.getAttribute('data-message-delete');
+      var messageRow = deleteBtn.closest('[data-message-row]');
+      B.confirmDialog('Delete this message?', 'This removes it permanently — there\'s no undo.').then(function (confirmed) {
+        if (!confirmed) return;
+        B.api('/api/messages/' + messageId, { method: 'DELETE' }).then(function () {
+          messageRow.remove();
+          B.toast('Message deleted');
+        }).catch(function (err) {
+          B.toast(err.message, 'error');
+        });
+      });
+    }
+  });
 
   /* ---------------- Customer accounts ---------------- */
 

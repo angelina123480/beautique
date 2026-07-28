@@ -90,7 +90,7 @@ const CSP = [
   // known trade-off, not an oversight; the real payoff of this policy is
   // blocking script/resource loads from any origin outside this allowlist.
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.public.blob.vercel-storage.com",
   // The homepage hero video is admin-uploaded to Vercel Blob (see

@@ -27,6 +27,7 @@
           <a href="<%= heroVideoProduct ? '/product/' + heroVideoProduct.id : '/shop' %>" class="hero-video-tile"
              aria-label="<%= heroVideoProduct ? 'Shop ' + heroVideoProduct.name : 'Shop the collection' %>">
             <video src="<%= siteSettings.heroVideoUrl %>" autoplay muted loop playsinline
+                   style="object-position: <%= siteSettings.heroVideoPositionX %>% <%= siteSettings.heroVideoPositionY %>%; transform: scale(<%= siteSettings.heroVideoZoom %>);"
                    <% if (heroVideoProduct && heroVideoProduct.images && heroVideoProduct.images[0]) { %>poster="<%= heroVideoProduct.images[0] %>"<% } %>></video>
             <% if (heroVideoProduct) { %><span class="hero-video-caption">Shop <%= heroVideoProduct.name %> →</span><% } %>
           </a>

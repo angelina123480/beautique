@@ -536,6 +536,15 @@ router.patch('/admin/site-settings', auth.requireAdmin, ah(async (req, res) => {
   if (payload.heroVideoProductId !== undefined) {
     fields.heroVideoProductId = payload.heroVideoProductId ? Number(payload.heroVideoProductId) : null;
   }
+  if (payload.heroVideoPositionX !== undefined) {
+    fields.heroVideoPositionX = Math.max(0, Math.min(100, Number(payload.heroVideoPositionX) || 50));
+  }
+  if (payload.heroVideoPositionY !== undefined) {
+    fields.heroVideoPositionY = Math.max(0, Math.min(100, Number(payload.heroVideoPositionY) || 50));
+  }
+  if (payload.heroVideoZoom !== undefined) {
+    fields.heroVideoZoom = Math.max(1, Math.min(2, Number(payload.heroVideoZoom) || 1));
+  }
 
   const settings = await siteSettings.updateSettings(fields);
   res.json({ ok: true, settings });
@@ -1114,6 +1123,33 @@ router.post('/contact', ah(async (req, res) => {
   }
 
   res.json({ ok: true, message: 'Thank you! We will get back to you shortly.' });
+}));
+
+router.delete('/messages/:id', auth.requireAdmin, ah(async (req, res) => {
+  await messages.deleteMessage(Number(req.params.id));
+  res.json({ ok: true });
+}));
+
+router.post('/messages/:id/reply', auth.requireAdmin, ah(async (req, res) => {
+  const id = Number(req.params.id);
+  const reply = String((req.body || {}).reply || '').trim();
+  if (!reply) {
+    return res.status(400).json({ ok: false, message: 'Write a reply first.' });
+  }
+
+  const target = await messages.getMessageById(id);
+  if (!target) {
+    return res.status(404).json({ ok: false, message: 'Message not found.' });
+  }
+
+  await emailService.sendEmail('contact_reply', target.email, {
+    firstName: target.name,
+    reply,
+    originalMessage: target.message
+  });
+
+  const updated = await messages.replyToMessage(id, reply);
+  res.json({ ok: true, message: updated });
 }));
 
 module.exports = router;
