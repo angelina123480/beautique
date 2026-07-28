@@ -93,6 +93,11 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.public.blob.vercel-storage.com",
+  // The homepage hero video is admin-uploaded to Vercel Blob (see
+  // lib/uploads.js) — media-src falls back to default-src 'self' when
+  // unset, which silently blocks that cross-origin <video> with no visible
+  // error beyond a blank player. Same allowlist as img-src, for the same reason.
+  "media-src 'self' blob: https://*.public.blob.vercel-storage.com",
   "connect-src 'self' https://cdn.jsdelivr.net https://nominatim.openstreetmap.org"
 ].join('; ');
 
