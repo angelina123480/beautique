@@ -46,6 +46,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Branded page loader — shown from first paint (CSS is render-blocking, so
+   there's no unstyled flash) and faded out by app.js once the page has
+   fully loaded, instead of a blank screen while assets come in. */
+#page-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+#page-loader img { width: 64px; height: 64px; animation: page-loader-pulse 1.6s ease-in-out infinite; }
+#page-loader.is-hidden { opacity: 0; pointer-events: none; }
+@keyframes page-loader-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.75; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #page-loader img { animation: none; }
+  #page-loader { transition: none; }
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-display);
   font-weight: 600;
@@ -2177,6 +2202,56 @@ img[src$="dawn-blush-peony.jpg"] {
 }
 .newsletter-form input::placeholder { color: rgba(255, 255, 255, 0.55); }
 .newsletter-form input:focus { outline: none; border-color: rgba(255, 255, 255, 0.6); }
+
+/* Shade matcher showcase — a real homepage moment for the one feature a
+   template can't fake, instead of being one card among three quiz teasers. */
+.shade-showcase {
+  background:
+    radial-gradient(90% 160% at 15% 0%, rgba(179, 74, 114, 0.28) 0%, transparent 55%),
+    linear-gradient(120deg, var(--ink), #1f1319);
+  border-radius: calc(var(--radius) + 6px);
+  color: #fff;
+  padding: 54px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+.shade-showcase-copy .eyebrow { color: #f0b8cd; }
+.shade-showcase-copy h2 { color: #fff; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.05; margin: 10px 0 14px; }
+.shade-showcase-copy p { color: rgba(255, 255, 255, 0.78); max-width: 40ch; margin: 0 0 24px; }
+.shade-showcase-copy .btn-primary { background: #fff; color: var(--ink); }
+.shade-showcase-copy .btn-primary:hover { color: var(--ink); background: var(--primary-soft); }
+
+.shade-viewfinder { position: relative; aspect-ratio: 1; border-radius: var(--radius-sm); overflow: hidden; max-width: 340px; margin: 0 auto; }
+.shade-viewfinder img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shade-viewfinder .vf-corner { position: absolute; width: 24px; height: 24px; border: 3px solid #fff; opacity: 0.9; }
+.shade-viewfinder .vf-corner.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+.shade-viewfinder .vf-corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+.shade-viewfinder .vf-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+.shade-viewfinder .vf-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+.shade-viewfinder .vf-scan {
+  position: absolute; left: 0; right: 0; height: 36%;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: vf-scan 3.2s ease-in-out infinite;
+}
+@keyframes vf-scan { 0% { top: -36%; } 50% { top: 100%; } 100% { top: -36%; } }
+@media (prefers-reduced-motion: reduce) { .shade-viewfinder .vf-scan { animation: none; top: 30%; } }
+
+.vf-match {
+  position: absolute; left: 14px; bottom: 14px;
+  background: #fff; color: var(--ink); border-radius: var(--radius-sm);
+  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow-md); font-size: 12.5px; line-height: 1.35;
+}
+.vf-match-swatch { width: 26px; height: 26px; border-radius: 50%; background: var(--primary); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); flex-shrink: 0; }
+.vf-match-text em { color: var(--gold); font-style: normal; font-weight: 700; }
+
+@media (max-width: 760px) {
+  .shade-showcase { grid-template-columns: 1fr; padding: 38px 28px; text-align: center; }
+  .shade-showcase-copy p { margin-left: auto; margin-right: auto; }
+  .shade-viewfinder { order: -1; margin-bottom: 8px; }
+}
 
 /* --------------------------------------------------------------------------
    Footer

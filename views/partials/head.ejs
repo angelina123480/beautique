@@ -14,6 +14,28 @@
   var metaType = typeof ogType !== 'undefined' && ogType ? ogType : 'website';
 %>
 <meta charset="utf-8">
+<script>
+  /* Registered before any stylesheet <link> on purpose: a script that comes
+     after a pending stylesheet has its EXECUTION deferred until that
+     stylesheet finishes loading (per spec, since it might query computed
+     styles) — on a slow connection that could easily eat several seconds
+     out of this timer before it even starts. Placed here, both the timeout
+     and the load listener are registered essentially at navigation start;
+     #page-loader itself doesn't exist yet, so the lookup happens lazily
+     inside each callback, by which time the body has been parsed. */
+  (function () {
+    function hidePageLoader() {
+      var loader = document.getElementById('page-loader');
+      if (!loader || loader.classList.contains('is-hidden')) return;
+      loader.classList.add('is-hidden');
+      loader.addEventListener('transitionend', function () {
+        if (loader.parentNode) loader.parentNode.removeChild(loader);
+      }, { once: true });
+    }
+    window.addEventListener('load', hidePageLoader);
+    setTimeout(hidePageLoader, 4000);
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Beautique — <%= page %></title>
 <meta name="description" content="<%= metaDescription %>">
